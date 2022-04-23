@@ -1,0 +1,4 @@
+coverage/
+*.profraw
+*.gcda
+*.gcno
