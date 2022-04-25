@@ -1,3 +1,0 @@
-[submodule "deps/libmdbx"]
-	path = deps/libmdbx
-	url = https://gitflic.ru/project/erthink/libmdbx.git
