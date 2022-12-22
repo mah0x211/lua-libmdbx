@@ -1,13 +1,13 @@
 package = "libmdbx"
 version = "scm-1"
 source = {
-    url = "git+https://github.com/mah0x211/lua-libmdbx.git"
+    url = "git+https://github.com/mah0x211/lua-libmdbx.git",
 }
 description = {
     summary = "libmdbx binding for lua.",
     homepage = "https://github.com/mah0x211/lua-libmdbx",
     license = "MIT/X11",
-    maintainer = "Masatoshi Fukunaga"
+    maintainer = "Masatoshi Fukunaga",
 }
 dependencies = {
     "lua >= 5.1",
@@ -16,7 +16,7 @@ dependencies = {
 build = {
     type = "command",
     build_command = [[
-        sh ./build_deps.sh && \
+        MDBX_VERSION="v0.11.13" sh ./build_deps.sh && \
         make clean && \
         WARNINGS="-Wall -Wno-trigraphs -Wmissing-field-initializers -Wreturn-type -Wmissing-braces -Wparentheses -Wno-switch -Wunused-function -Wunused-label -Wunused-parameter -Wunused-variable -Wunused-value -Wuninitialized -Wunknown-pragmas -Wshadow -Wsign-compare" \
         MDBX_COVERAGE="$(MDBX_COVERAGE)" \
@@ -32,5 +32,5 @@ build = {
         LIB_EXTENSION="$(LIB_EXTENSION)" \
         INST_LIBDIR="$(LIBDIR)" \
         make install
-    ]]
+    ]],
 }
