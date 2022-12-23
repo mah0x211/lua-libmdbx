@@ -455,7 +455,7 @@ static int set_syncbytes_lua(lua_State *L)
         lmdbx_pusherror(L, rc);
         return 3;
     }
-    lua_pushboolean(L, 0);
+    lua_pushboolean(L, 1);
     return 1;
 }
 
