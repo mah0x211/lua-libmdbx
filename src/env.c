@@ -369,36 +369,6 @@ static int set_flags_lua(lua_State *L)
     return 1;
 }
 
-static int close_lua(lua_State *L)
-{
-    lmdbx_env_t *env = lauxh_checkudata(L, 1, LMDBX_ENV_MT);
-    int dont_sync    = lauxh_optboolean(L, 2, 0);
-
-    if (getpid() != env->pid) {
-        lua_pushboolean(L, 0);
-        lua_pushstring(
-            L, "cannot be closed outside the process in which it was created");
-        return 2;
-    }
-
-    if (env->env) {
-        int rc = mdbx_env_close_ex(env->env, dont_sync);
-        if (rc == MDBX_BUSY) {
-            lua_pushboolean(L, 0);
-            return 1;
-        }
-
-        env->env = NULL;
-        if (rc) {
-            lua_pushboolean(L, 1);
-            lmdbx_pusherror(L, rc);
-            return 3;
-        }
-    }
-    lua_pushboolean(L, 1);
-    return 1;
-}
-
 static int get_syncperiod_lua(lua_State *L)
 {
     lmdbx_env_t *env                = lauxh_checkudata(L, 1, LMDBX_ENV_MT);
@@ -579,6 +549,37 @@ static int delete_lua(lua_State *L)
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
         return 3;
+    }
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+static int close_lua(lua_State *L)
+{
+    lmdbx_env_t *env = lauxh_checkudata(L, 1, LMDBX_ENV_MT);
+    int dont_sync    = lauxh_optboolean(L, 2, 0);
+
+    if (getpid() != env->pid) {
+        lua_pushboolean(L, 0);
+        lua_pushstring(
+            L, "cannot be closed outside the process in which it was created");
+        return 2;
+    }
+
+    if (env->env) {
+        int rc = mdbx_env_close_ex(env->env, dont_sync);
+        if (rc == MDBX_BUSY) {
+            lua_pushboolean(L, 0);
+            lmdbx_pusherror(L, rc);
+            return 3;
+        }
+
+        env->env = NULL;
+        if (rc) {
+            lua_pushboolean(L, 1);
+            lmdbx_pusherror(L, rc);
+            return 3;
+        }
     }
     lua_pushboolean(L, 1);
     return 1;
