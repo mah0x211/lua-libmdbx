@@ -485,7 +485,7 @@ static int sync_lua(lua_State *L)
     switch (rc) {
     case 0:
     case MDBX_RESULT_TRUE:
-        lua_pushboolean(L, 0);
+        lua_pushboolean(L, 1);
         return 1;
 
     default:
