@@ -605,7 +605,7 @@ static int get_option_lua(lua_State *L)
 {
     lmdbx_env_t *env   = lauxh_checkudata(L, 1, LMDBX_ENV_MT);
     lua_Integer option = lauxh_checkinteger(L, 2);
-    uint64_t v         = lauxh_checkuint64(L, 3);
+    uint64_t v         = 0;
     int rc             = mdbx_env_get_option(env->env, option, &v);
 
     if (rc) {

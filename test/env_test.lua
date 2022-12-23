@@ -20,6 +20,22 @@ function testcase.new()
     assert.match(env, '^libmdbx.env: ', false)
 end
 
+function testcase.set_get_option()
+    local env = assert(libmdbx.new())
+
+    -- test that set option
+    assert(env:set_option(libmdbx.opt_max_readers, 123))
+
+    -- test that get option
+    assert.equal(env:get_option(libmdbx.opt_max_readers), 123)
+
+    -- test that return error if option is invalid
+    local v, err, errno = env:get_option(-123)
+    assert.is_nil(v)
+    assert.match(err, 'Invalid')
+    assert.equal(errno, libmdbx.errno.EINVAL.errno)
+end
+
 function testcase.env_open()
     local env = assert(libmdbx.new())
 
