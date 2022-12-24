@@ -1,4 +1,5 @@
 local testcase = require('testcase')
+local fileno = require('io.fileno')
 local libmdbx = require('libmdbx')
 
 local PATHNAME = './test.db'
@@ -62,6 +63,130 @@ function testcase.close()
     assert(env:open(PATHNAME, tonumber('0644', 8), libmdbx.NOSUBDIR,
                     libmdbx.COALESCE, libmdbx.LIFORECLAIM))
 
+end
+
+function testcase.delete()
+    local env = openenv()
+
+    -- test that delete the environment's files in a proper and multiprocess-safe way
+    assert.is_true(env:delete())
+
+    -- test that already deleted
+    local ok, err, eno = env:delete()
+    assert.is_false(ok)
+    assert.equal(err, libmdbx.errno.RESULT_TRUE.message)
+    assert.equal(eno, libmdbx.errno.RESULT_TRUE.errno)
+
+    -- test that cannot be deleted if env is not yet open
+    env = assert(libmdbx.new())
+    ok, err, eno = env:delete()
+    assert.is_false(ok)
+    assert.equal(err, libmdbx.errno.EPERM.message)
+    assert.equal(eno, libmdbx.errno.EPERM.errno)
+
+end
+
+function testcase.copy()
+    local env = openenv()
+
+    -- test that copy env to specified path
+    local pathname = './copied.db'
+    assert.is_true(env:copy(pathname))
+    local f = assert(io.open(pathname))
+    f:close()
+    os.remove(pathname)
+
+    -- test that cannot be copied to the same place as the source db
+    local ok = env:copy(PATHNAME)
+    assert.is_false(ok)
+end
+
+function testcase.copy2fd()
+    local env = openenv()
+
+    -- test that copy env to specified path
+    local pathname = './copied.db'
+    local f = assert(io.open(pathname, 'w+'))
+    assert.equal(f:seek('end'), 0)
+    local fd = assert.is_int(fileno(f))
+    assert.is_true(env:copy2fd(fd))
+    assert.greater(f:seek('end'), 0)
+    f:close()
+    os.remove(pathname)
+
+    -- test that cannot be copied to the same place as the source db
+    f = assert(io.open(PATHNAME))
+    fd = assert.is_int(fileno(f))
+    local ok = env:copy2fd(fd)
+    assert.is_false(ok)
+end
+
+function testcase.stat()
+    local env = openenv()
+
+    -- test that get the db stat
+    assert.is_table(env:stat())
+
+    -- test that cannot be get the db stat
+    env = assert(libmdbx.new())
+    local stat, err, eno = env:stat()
+    assert.is_nil(stat)
+    assert.equal(err, libmdbx.errno.EPERM.message)
+    assert.equal(eno, libmdbx.errno.EPERM.errno)
+end
+
+function testcase.info()
+    local env = openenv()
+
+    -- test that get the db info
+    assert.is_table(env:info())
+
+    -- test that can be get the db info even if its not yet open
+    env = assert(libmdbx.new())
+    assert.is_table(env:info())
+end
+
+function testcase.sync()
+    local env = openenv()
+
+    -- test that flush the env data buffers to disk
+    assert.is_true(env:sync())
+
+    -- test that cannot be flush the env data if its not yet open
+    env = assert(libmdbx.new())
+    local ok, err, eno = env:sync()
+    assert.is_false(ok)
+    assert.equal(err, libmdbx.errno.EPERM.message)
+    assert.equal(eno, libmdbx.errno.EPERM.errno)
+end
+
+function testcase.sync_poll()
+    local env = openenv()
+
+    -- test that flush the env data buffers to disk
+    assert.is_true(env:sync_poll())
+
+    -- test that cannot be flush the env data if its not yet open
+    env = assert(libmdbx.new())
+    local ok, err, eno = env:sync_poll()
+    assert.is_false(ok)
+    assert.equal(err, libmdbx.errno.EPERM.message)
+    assert.equal(eno, libmdbx.errno.EPERM.errno)
+end
+
+function testcase.set_get_syncbytes()
+    local env = openenv()
+
+    -- test that sets threshold to force flush the data buffers to disk
+    assert.is_true(env:set_syncbytes(4096 * 2))
+    assert.equal(env:get_syncbytes(), 4096 * 2)
+
+    -- test that cannot be flush the env data if its not yet open
+    env = assert(libmdbx.new())
+    local ok, err, eno = env:set_syncbytes(1024)
+    assert.is_false(ok)
+    assert.equal(err, libmdbx.errno.EPERM.message)
+    assert.equal(eno, libmdbx.errno.EPERM.errno)
 end
 
 function testcase.begin()

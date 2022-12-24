@@ -1,6 +1,7 @@
 TARGET=libmdbx.$(LIB_EXTENSION)
 SRCS=$(wildcard src/*.c)
 OBJS=$(SRCS:.c=.o)
+GCDAS=$(OBJS:.o=.gcda)
 INSTALL?=install
 
 ifdef MDBX_COVERAGE
@@ -23,6 +24,4 @@ install:
 	rm -f ./*.so
 
 clean:
-	rm -f ./src/*.o
-	rm -f ./*.so
-
+	rm -f $(OBJS) $(TARGET) $(GCDAS)

@@ -58,6 +58,7 @@ jobs:
       run: |
         sudo apt install lcov -y
         luarocks install testcase
+        luarocks install io-fileno
     -
       name: Run Test
       run: |
