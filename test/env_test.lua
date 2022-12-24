@@ -189,6 +189,30 @@ function testcase.set_get_syncbytes()
     assert.equal(eno, libmdbx.errno.EPERM.errno)
 end
 
+function testcase.set_get_syncperiod()
+    local env = openenv()
+
+    -- test that sets relative period since the last unsteady commit to force
+    -- flush the data buffers to disk, even of MDBX_SAFE_NOSYNC flag in the
+    -- environment
+    assert.is_true(env:set_syncperiod(16 * 16))
+    assert.equal(env:get_syncperiod(), 16 * 16)
+
+    -- test that cannot be sets the sync period
+    env = assert(libmdbx.new())
+    local ok, err, eno = env:set_syncperiod(1000)
+    assert.is_false(ok)
+    assert.equal(err, libmdbx.errno.EPERM.message)
+    assert.equal(eno, libmdbx.errno.EPERM.errno)
+
+    -- test that cannot be get the sync period
+    local v
+    v, err, eno = env:get_syncperiod()
+    assert.is_nil(v)
+    assert.equal(err, libmdbx.errno.EPERM.message)
+    assert.equal(eno, libmdbx.errno.EPERM.errno)
+end
+
 function testcase.begin()
     local env = assert(libmdbx.new())
     assert(env:open(PATHNAME, nil, libmdbx.NOSUBDIR, libmdbx.COALESCE,
