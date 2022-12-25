@@ -356,3 +356,10 @@ function testcase.reader_list()
     end))
     assert.equal(count, 2)
 end
+
+function testcase.reader_check()
+    local env = openenv()
+
+    -- test that check for stale entries in the reader lock table
+    assert.is_int(env:reader_check())
+end

@@ -71,6 +71,7 @@ static int reader_check_lua(lua_State *L)
     case 0:
     case MDBX_RESULT_TRUE:
         lua_pushinteger(L, dead);
+        return 1;
 
     default:
         lua_pushnil(L);
