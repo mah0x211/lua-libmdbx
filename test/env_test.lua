@@ -15,10 +15,10 @@ function testcase.after_each()
     os.remove(LOCKFILE)
 end
 
-local function openenv()
+local function openenv(...)
     local env = assert(libmdbx.new())
     assert(env:open(PATHNAME, nil, libmdbx.NOSUBDIR, libmdbx.COALESCE,
-                    libmdbx.LIFORECLAIM))
+                    libmdbx.LIFORECLAIM, ...))
     return env
 end
 
@@ -213,12 +213,146 @@ function testcase.set_get_syncperiod()
     assert.equal(eno, libmdbx.errno.EPERM.errno)
 end
 
-function testcase.begin()
+function testcase.set_get_flags()
     local env = assert(libmdbx.new())
-    assert(env:open(PATHNAME, nil, libmdbx.NOSUBDIR, libmdbx.COALESCE,
-                    libmdbx.LIFORECLAIM))
+
+    -- test that set environment flags
+    assert.is_true(env:set_flags(true, libmdbx.NOSUBDIR, libmdbx.EXCLUSIVE,
+                                 libmdbx.ACCEDE, libmdbx.WRITEMAP,
+                                 libmdbx.NOTLS, libmdbx.NORDAHEAD,
+                                 libmdbx.NOMEMINIT, libmdbx.COALESCE,
+                                 libmdbx.LIFORECLAIM, libmdbx.PAGEPERTURB,
+                                 libmdbx.NOMETASYNC, libmdbx.SAFE_NOSYNC))
+
+    -- test that get environment flags
+    local flgs = assert.is_table(env:get_flags())
+    assert.equal(flgs, {
+        NOSUBDIR = libmdbx.NOSUBDIR,
+        EXCLUSIVE = libmdbx.EXCLUSIVE,
+        ACCEDE = libmdbx.ACCEDE,
+        WRITEMAP = libmdbx.WRITEMAP,
+        NOTLS = libmdbx.NOTLS,
+        NORDAHEAD = libmdbx.NORDAHEAD,
+        NOMEMINIT = libmdbx.NOMEMINIT,
+        COALESCE = libmdbx.COALESCE,
+        LIFORECLAIM = libmdbx.LIFORECLAIM,
+        PAGEPERTURB = libmdbx.PAGEPERTURB,
+        NOMETASYNC = libmdbx.NOMETASYNC,
+        SAFE_NOSYNC = libmdbx.SAFE_NOSYNC,
+        UTTERLY_NOSYNC = libmdbx.UTTERLY_NOSYNC,
+    })
+
+    -- test that unset environment flags
+    assert.is_true(env:set_flags(false, libmdbx.NOSUBDIR, libmdbx.NOTLS,
+                                 libmdbx.NORDAHEAD))
+    flgs = assert.is_table(env:get_flags())
+    assert.equal(flgs, {
+        EXCLUSIVE = libmdbx.EXCLUSIVE,
+        ACCEDE = libmdbx.ACCEDE,
+        WRITEMAP = libmdbx.WRITEMAP,
+        NOMEMINIT = libmdbx.NOMEMINIT,
+        COALESCE = libmdbx.COALESCE,
+        LIFORECLAIM = libmdbx.LIFORECLAIM,
+        PAGEPERTURB = libmdbx.PAGEPERTURB,
+        NOMETASYNC = libmdbx.NOMETASYNC,
+        SAFE_NOSYNC = libmdbx.SAFE_NOSYNC,
+        UTTERLY_NOSYNC = libmdbx.UTTERLY_NOSYNC,
+    })
+end
+
+function testcase.get_path()
+    local env = openenv()
+
+    -- test that return the path that was used in mdbx_env_open()
+    assert.equal(env:get_path(), PATHNAME)
+    env:close()
+
+    env = assert(libmdbx.new())
+    assert.is_nil(env:get_path())
+end
+
+function testcase.get_fd()
+    local env = openenv()
+
+    -- test that return the path that was used in mdbx_env_open()
+    assert.is_uint(env:get_fd())
+    env:close()
+
+    env = assert(libmdbx.new())
+    assert.is_nil(env:get_fd())
+end
+
+function testcase.set_geometry()
+    -- TODO
+end
+
+function testcase.set_get_maxreaders()
+    local env = assert(libmdbx.new())
+
+    -- test that set the maximum number of threads/reader slots
+    assert.is_true(env:set_maxreaders(10))
+    -- test that get the maximum number of threads/reader slots
+    assert.equal(env:get_maxreaders(), 10)
+    assert(env:close())
+
+    -- test that fail if env is open
+    env = openenv()
+    local ok, err, eno = env:set_maxreaders(10)
+    assert.is_false(ok)
+    assert.equal(err, libmdbx.errno.EPERM.message)
+    assert.equal(eno, libmdbx.errno.EPERM.errno)
+end
+
+function testcase.set_get_maxdbs()
+    local env = assert(libmdbx.new())
+
+    -- test that set the maximum number of named databases for the environment
+    assert.is_true(env:set_maxdbs(10))
+    -- test that get the maximum number of named databases for the environment
+    assert.equal(env:get_maxdbs(), 10)
+    assert(env:close())
+
+    -- test that fail if env is open
+    env = openenv()
+    local ok, err, eno = env:set_maxdbs(10)
+    assert.is_false(ok)
+    assert.equal(err, libmdbx.errno.EPERM.message)
+    assert.equal(eno, libmdbx.errno.EPERM.errno)
+end
+
+function testcase.get_maxkeysize()
+    local env = assert(libmdbx.new())
+
+    -- test that returns the maximum size of keys can put
+    assert.is_int(env:get_maxkeysize())
+end
+
+function testcase.get_maxvalsize()
+    local env = assert(libmdbx.new())
+
+    -- test that returns the maximum size of data we can put
+    assert.is_int(env:get_maxvalsize())
+end
+
+function testcase.begin()
+    local env = openenv()
 
     -- test that create new libmdbx.txn object
     local txn = assert(env:begin())
     assert.match(txn, '^libmdbx.txn: ', false)
+end
+
+function testcase.reader_list()
+    local env = openenv(libmdbx.NOTLS)
+    -- luacheck: ignore txn1 txn2
+    local txn1 = assert(env:begin(libmdbx.TXN_RDONLY))
+    local txn2 = assert(env:begin(libmdbx.TXN_RDONLY))
+
+    -- test that returns the maximum size of data we can put
+    local count = 0
+    -- luacheck: ignore ...
+    assert.is_true(env:reader_list(function(...)
+        count = count + 1
+    end))
+    assert.equal(count, 2)
 end
