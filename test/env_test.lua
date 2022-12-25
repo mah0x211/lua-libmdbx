@@ -371,3 +371,10 @@ function testcase.thread_register()
     assert.is_true(env:thread_register())
 end
 
+function testcase.thread_unregister()
+    local env = openenv()
+
+    -- test that unregisters the current thread as a reader for the environment
+    assert.is_true(env:thread_unregister())
+end
+
