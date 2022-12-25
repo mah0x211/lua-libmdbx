@@ -53,6 +53,7 @@ static int thread_register_lua(lua_State *L)
     case 0:
     case MDBX_RESULT_TRUE:
         lua_pushboolean(L, 1);
+        return 1;
 
     default:
         lua_pushboolean(L, 0);

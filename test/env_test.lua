@@ -363,3 +363,11 @@ function testcase.reader_check()
     -- test that check for stale entries in the reader lock table
     assert.is_int(env:reader_check())
 end
+
+function testcase.thread_register()
+    local env = openenv()
+
+    -- test that registers the current thread as a reader for the environment
+    assert.is_true(env:thread_register())
+end
+
