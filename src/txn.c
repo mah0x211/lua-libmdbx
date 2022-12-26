@@ -268,41 +268,17 @@ static int get_equal_or_great_lua(lua_State *L)
     }
 }
 
-static int get_ex_lua(lua_State *L)
-{
-    lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
-    size_t klen      = 0;
-    const char *key  = lauxh_checklstring(L, 2, &klen);
-    size_t count     = lauxh_optboolean(L, 3, 0);
-    MDBX_val k       = {.iov_base = (void *)key, .iov_len = klen};
-    MDBX_val v       = {0};
-    int rc = mdbx_get_ex(txn->txn, txn->dbi, &k, &v, (count) ? &count : NULL);
-
-    if (rc) {
-        lua_pushnil(L);
-        if (rc == MDBX_NOTFOUND) {
-            return 1;
-        }
-        lmdbx_pusherror(L, rc);
-        return 3;
-    }
-    lua_createtable(L, 2, 1);
-    lua_pushlstring(L, k.iov_base, k.iov_len);
-    lua_rawseti(L, -2, 1);
-    lua_pushlstring(L, v.iov_base, v.iov_len);
-    lua_rawseti(L, -2, 2);
-    lauxh_pushint2tbl(L, "count", count);
-    return 1;
-}
-
 static int get_lua(lua_State *L)
 {
     lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
     size_t klen      = 0;
     const char *key  = lauxh_checklstring(L, 2, &klen);
+    int do_count     = lauxh_optboolean(L, 3, 0);
     MDBX_val k       = {.iov_base = (void *)key, .iov_len = klen};
     MDBX_val v       = {0};
-    int rc           = mdbx_get(txn->txn, txn->dbi, &k, &v);
+    size_t count     = 0;
+    int rc = (do_count) ? mdbx_get_ex(txn->txn, txn->dbi, &k, &v, &count) :
+                          mdbx_get(txn->txn, txn->dbi, &k, &v);
 
     if (rc) {
         lua_pushnil(L);
@@ -313,6 +289,12 @@ static int get_lua(lua_State *L)
         return 3;
     }
     lua_pushlstring(L, v.iov_base, v.iov_len);
+    if (do_count) {
+        lua_pushnil(L);
+        lua_pushnil(L);
+        lua_pushinteger(L, count);
+        return 4;
+    }
     return 1;
 }
 
@@ -760,7 +742,6 @@ void lmdbx_txn_init(lua_State *L)
         {"dbi_close",             dbi_close_lua            },
         {"drop",                  drop_lua                 },
         {"get",                   get_lua                  },
-        {"get_ex",                get_ex_lua               },
         {"get_equal_or_great",    get_equal_or_great_lua   },
         {"op_insert",             op_insert_lua            }, // helper func
         {"op_upsert",             op_upsert_lua            }, // helper func
