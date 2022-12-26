@@ -598,7 +598,7 @@ static int env_lua(lua_State *L)
 static int info_lua(lua_State *L)
 {
     lmdbx_txn_t *txn   = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
-    int scan_rlt       = lauxh_checkboolean(L, 2);
+    int scan_rlt       = lauxh_optboolean(L, 2, 0);
     MDBX_txn_info info = {0};
     int rc             = mdbx_txn_info(txn->txn, &info, scan_rlt);
 
