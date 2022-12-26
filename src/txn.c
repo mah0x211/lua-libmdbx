@@ -348,42 +348,42 @@ static int dbi_flags_lua(lua_State *L)
     lua_createtable(L, 0, 2);
     lua_createtable(L, 0, 0);
     if (flags & MDBX_REVERSEKEY) {
-        lauxh_pushstr2arr(L, -1, "REVERSEKEY");
+        lauxh_pushint2tbl(L, "REVERSEKEY", MDBX_REVERSEKEY);
     }
     if (flags & MDBX_DUPSORT) {
-        lauxh_pushstr2arr(L, -1, "DUPSORT");
+        lauxh_pushint2tbl(L, "DUPSORT", MDBX_DUPSORT);
     }
     if (flags & MDBX_INTEGERKEY) {
-        lauxh_pushstr2arr(L, -1, "INTEGERKEY");
+        lauxh_pushint2tbl(L, "INTEGERKEY", MDBX_INTEGERKEY);
     }
     if (flags & MDBX_DUPFIXED) {
-        lauxh_pushstr2arr(L, -1, "DUPFIXED");
+        lauxh_pushint2tbl(L, "DUPFIXED", MDBX_DUPFIXED);
     }
     if (flags & MDBX_INTEGERDUP) {
-        lauxh_pushstr2arr(L, -1, "INTEGERDUP");
+        lauxh_pushint2tbl(L, "INTEGERDUP", MDBX_INTEGERDUP);
     }
     if (flags & MDBX_REVERSEDUP) {
-        lauxh_pushstr2arr(L, -1, "REVERSEDUP");
+        lauxh_pushint2tbl(L, "REVERSEDUP", MDBX_REVERSEDUP);
     }
     if (flags & MDBX_CREATE) {
-        lauxh_pushstr2arr(L, -1, "CREATE");
+        lauxh_pushint2tbl(L, "CREATE", MDBX_CREATE);
     }
     if (flags & MDBX_DB_ACCEDE) {
-        lauxh_pushstr2arr(L, -1, "DB_ACCEDE");
+        lauxh_pushint2tbl(L, "DB_ACCEDE", MDBX_DB_ACCEDE);
     }
     lua_setfield(L, -2, "flags");
     lua_createtable(L, 0, 0);
     if (state & MDBX_DBI_DIRTY) {
-        lauxh_pushstr2arr(L, -1, "DBI_DIRTY");
+        lauxh_pushint2tbl(L, "DBI_DIRTY", MDBX_DBI_DIRTY);
     }
     if (state & MDBX_DBI_STALE) {
-        lauxh_pushstr2arr(L, -1, "DBI_STALE");
+        lauxh_pushint2tbl(L, "DBI_STALE", MDBX_DBI_STALE);
     }
     if (state & MDBX_DBI_FRESH) {
-        lauxh_pushstr2arr(L, -1, "DBI_FRESH");
+        lauxh_pushint2tbl(L, "DBI_FRESH", MDBX_DBI_FRESH);
     }
     if (state & MDBX_DBI_CREAT) {
-        lauxh_pushstr2arr(L, -1, "DBI_CREATE");
+        lauxh_pushint2tbl(L, "DBI_CREATE", MDBX_DBI_CREAT);
     }
     lua_setfield(L, -2, "state");
 
