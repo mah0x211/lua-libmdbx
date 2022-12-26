@@ -333,20 +333,6 @@ static int drop_lua(lua_State *L)
     return 1;
 }
 
-static int dbi_close_lua(lua_State *L)
-{
-    lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
-    int rc           = mdbx_dbi_close(mdbx_txn_env(txn->txn), txn->dbi);
-
-    if (rc) {
-        lua_pushboolean(L, 0);
-        lmdbx_pusherror(L, rc);
-        return 3;
-    }
-    lua_pushboolean(L, 1);
-    return 1;
-}
-
 static int dbi_flags_lua(lua_State *L)
 {
     lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
@@ -434,6 +420,20 @@ static int dbi_stat_lua(lua_State *L)
     return 1;
 }
 
+static int dbi_close_lua(lua_State *L)
+{
+    lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
+    int rc           = mdbx_dbi_close(mdbx_txn_env(txn->txn), txn->dbi);
+
+    if (rc) {
+        lua_pushboolean(L, 0);
+        lmdbx_pusherror(L, rc);
+        return 3;
+    }
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
 static int dbi_open_lua(lua_State *L)
 {
     lmdbx_txn_t *txn  = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
@@ -478,70 +478,61 @@ static int reset_lua(lua_State *L)
     return 1;
 }
 
-static int break_lua(lua_State *L)
+#define EXEC_AS_COMMIT 0
+#define EXEC_AS_ABORT  1
+#define EXEC_AS_BREAK  2
+
+static inline int exec_txn(lua_State *L, int doas)
 {
     lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
-    int rc           = mdbx_txn_break(txn->txn);
+    int rc           = 0;
+
+    switch (doas) {
+    case EXEC_AS_COMMIT:
+        rc = mdbx_txn_commit(txn->txn);
+        break;
+    case EXEC_AS_ABORT:
+        rc = mdbx_txn_abort(txn->txn);
+        break;
+    case EXEC_AS_BREAK:
+        rc = mdbx_txn_break(txn->txn);
+        break;
+    }
+
+    if (rc == MDBX_THREAD_MISMATCH) {
+        lua_pushboolean(L, 0);
+        lmdbx_pusherror(L, rc);
+        return 3;
+    } else if (rc) {
+        lua_pushboolean(L, 0);
+        lmdbx_pusherror(L, rc);
+        return 3;
+    } else if (doas != EXEC_AS_BREAK) {
+        txn->env_ref = lauxh_unref(L, txn->env_ref);
+        txn->dbi     = 0;
+        txn->txn     = NULL;
+    }
 
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
         return 3;
     }
-
     lua_pushboolean(L, 1);
     return 1;
-}
-
-static inline void release_txn(lua_State *L, lmdbx_txn_t *txn)
-{
-    txn->env_ref = lauxh_unref(L, txn->env_ref);
-    txn->dbi     = 0;
-    txn->txn     = NULL;
 }
 
 static int abort_lua(lua_State *L)
 {
-    lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
-    int rc           = mdbx_txn_abort(txn->txn);
-
-    if (rc == MDBX_THREAD_MISMATCH) {
-        lua_pushboolean(L, 0);
-        lmdbx_pusherror(L, rc);
-        return 3;
+    if (lauxh_optboolean(L, 2, 0)) {
+        return exec_txn(L, EXEC_AS_BREAK);
     }
-    release_txn(L, txn);
-
-    if (rc) {
-        lua_pushboolean(L, 0);
-        lmdbx_pusherror(L, rc);
-        return 3;
-    }
-
-    lua_pushboolean(L, 1);
-    return 1;
+    return exec_txn(L, EXEC_AS_ABORT);
 }
 
 static int commit_lua(lua_State *L)
 {
-    lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
-    int rc           = mdbx_txn_commit(txn->txn);
-
-    if (rc == MDBX_THREAD_MISMATCH) {
-        lua_pushboolean(L, 0);
-        lmdbx_pusherror(L, rc);
-        return 3;
-    }
-    release_txn(L, txn);
-
-    if (rc) {
-        lua_pushboolean(L, 0);
-        lmdbx_pusherror(L, rc);
-        return 3;
-    }
-
-    lua_pushboolean(L, 1);
-    return 1;
+    return exec_txn(L, EXEC_AS_COMMIT);
 }
 
 static int id_lua(lua_State *L)
@@ -753,7 +744,6 @@ void lmdbx_txn_init(lua_State *L)
         {"id",                    id_lua                   },
         {"commit",                commit_lua               },
         {"abort",                 abort_lua                },
-        {"break",                 break_lua                },
         {"reset",                 reset_lua                },
         {"renew",                 renew_lua                },
         {"dbi_open",              dbi_open_lua             },
