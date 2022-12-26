@@ -396,13 +396,20 @@ static int dbi_dupsort_depthmask_lua(lua_State *L)
     uint32_t mask    = 0;
     int rc           = mdbx_dbi_dupsort_depthmask(txn->txn, txn->dbi, &mask);
 
-    if (rc) {
+    switch (rc) {
+    case 0:
+        lua_pushinteger(L, mask);
+        return 1;
+
+    case MDBX_RESULT_TRUE:
+        lua_pushinteger(L, 0);
+        return 1;
+
+    default:
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
         return 3;
     }
-    lua_pushinteger(L, mask);
-    return 1;
 }
 
 static int dbi_stat_lua(lua_State *L)
