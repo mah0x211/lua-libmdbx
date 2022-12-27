@@ -29,7 +29,7 @@
 static int dbi_sequence_lua(lua_State *L)
 {
     lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
-    uintptr_t incr   = lauxh_checkuint64(L, 2);
+    uintptr_t incr   = lauxh_optuint64(L, 2, 0);
     uint64_t result  = 0;
     int rc           = mdbx_dbi_sequence(txn->txn, txn->dbi, &result, incr);
 
