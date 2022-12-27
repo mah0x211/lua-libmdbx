@@ -316,9 +316,11 @@ static int close_lua(lua_State *L)
 {
     lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
 
-    cur->cur     = NULL;
-    cur->txn_ref = lauxh_unref(L, cur->txn_ref);
-
+    if (cur->cur) {
+        mdbx_cursor_close(cur->cur);
+        cur->cur     = NULL;
+        cur->txn_ref = lauxh_unref(L, cur->txn_ref);
+    }
     return 0;
 }
 
