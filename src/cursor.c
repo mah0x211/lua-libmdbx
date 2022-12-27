@@ -209,24 +209,26 @@ static int op_update_lua(lua_State *L)
 static int get_batch_lua(lua_State *L)
 {
     lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
-    lua_Integer limit   = lauxh_optuint16(L, 2, 0x7F);
+    lua_Integer npair   = lauxh_optuint16(L, 2, 0xFF);
     lua_Integer op      = lauxh_optinteger(L, 3, MDBX_FIRST);
+    size_t limit        = npair * 2;
     size_t count        = 0;
     MDBX_val *pairs     = lua_newuserdata(L, sizeof(MDBX_val) * limit);
     int rc = mdbx_cursor_get_batch(cur->cur, &count, pairs, limit, op);
 
     if (rc) {
-        lua_pushnil(L);
         if (rc == MDBX_NOTFOUND) {
-            return 1;
+            return 0;
         }
+        lua_pushnil(L);
         lmdbx_pusherror(L, rc);
         return 3;
     }
-    lua_createtable(L, count, 0);
-    for (size_t i = 0; i < count; i++) {
+    lua_createtable(L, 0, count / 2);
+    for (size_t i = 0; i < count; i += 2) {
         lua_pushlstring(L, pairs[i].iov_base, pairs[i].iov_len);
-        lua_rawseti(L, -2, i + 1);
+        lua_pushlstring(L, pairs[i + 1].iov_base, pairs[i + 1].iov_len);
+        lua_rawset(L, -3);
     }
     return 1;
 }
