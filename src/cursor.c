@@ -234,23 +234,23 @@ static int get_batch_lua(lua_State *L)
 static int get_lua(lua_State *L)
 {
     lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
-    size_t klen         = 0;
-    const char *key     = lauxh_checklstring(L, 2, &klen);
-    lua_Integer op      = lauxh_optinteger(L, 3, MDBX_FIRST);
-    MDBX_val k          = {.iov_base = (void *)key, .iov_len = klen};
+    lua_Integer op      = lauxh_optinteger(L, 2, MDBX_FIRST);
+    MDBX_val k          = {0};
     MDBX_val v          = {0};
     int rc              = mdbx_cursor_get(cur->cur, &k, &v, op);
 
     if (rc) {
-        lua_pushnil(L);
         if (rc == MDBX_NOTFOUND) {
-            return 1;
+            return 0;
         }
+        lua_pushnil(L);
+        lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 4;
     }
+    lua_pushlstring(L, k.iov_base, k.iov_len);
     lua_pushlstring(L, v.iov_base, v.iov_len);
-    return 1;
+    return 2;
 }
 
 static int copy_lua(lua_State *L)
