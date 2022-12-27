@@ -146,6 +146,7 @@ static int replace_lua(lua_State *L)
     int rc            = mdbx_replace(txn->txn, txn->dbi, &k, new, &old, flags);
 
     if (rc == MDBX_RESULT_TRUE) {
+        // the buffer passed in is too small
         old.iov_base = alloca(old.iov_len);
         rc           = mdbx_replace(txn->txn, txn->dbi, &k, new, &old, flags);
     }
@@ -250,11 +251,9 @@ static int get_equal_or_great_lua(lua_State *L)
     switch (rc) {
     case MDBX_SUCCESS:
     case MDBX_RESULT_TRUE:
-        lua_createtable(L, 2, 0);
-        lua_pushlstring(L, k.iov_base, k.iov_len);
-        lua_rawseti(L, -2, 1);
-        lua_pushlstring(L, v.iov_base, v.iov_len);
-        lua_rawseti(L, -2, 2);
+        lua_createtable(L, 0, 2);
+        lauxh_pushlstr2tbl(L, "key", k.iov_base, k.iov_len);
+        lauxh_pushlstr2tbl(L, "data", v.iov_base, v.iov_len);
         return 1;
 
     case MDBX_NOTFOUND:
@@ -310,6 +309,20 @@ static int drop_lua(lua_State *L)
         return 3;
     } else if (del) {
         txn->dbi = 0;
+    }
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+static int dbi_close_lua(lua_State *L)
+{
+    lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
+    int rc           = mdbx_dbi_close(mdbx_txn_env(txn->txn), txn->dbi);
+
+    if (rc) {
+        lua_pushboolean(L, 0);
+        lmdbx_pusherror(L, rc);
+        return 3;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -406,20 +419,6 @@ static int dbi_stat_lua(lua_State *L)
         return 3;
     }
     lmdbx_pushstat(L, &stat);
-    return 1;
-}
-
-static int dbi_close_lua(lua_State *L)
-{
-    lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
-    int rc           = mdbx_dbi_close(mdbx_txn_env(txn->txn), txn->dbi);
-
-    if (rc) {
-        lua_pushboolean(L, 0);
-        lmdbx_pusherror(L, rc);
-        return 3;
-    }
-    lua_pushboolean(L, 1);
     return 1;
 }
 
