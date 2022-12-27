@@ -68,20 +68,22 @@ static int estimate_range_lua(lua_State *L)
 {
     lmdbx_txn_t *txn      = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
     size_t begin_klen     = 0;
-    const char *begin_key = lauxh_checklstring(L, 2, &begin_klen);
-    size_t begin_vlen     = 0;
-    const char *begin_val = lauxh_checklstring(L, 3, &begin_vlen);
+    const char *begin_key = lauxh_optlstring(L, 2, NULL, &begin_klen);
     size_t end_klen       = 0;
-    const char *end_key   = lauxh_checklstring(L, 4, &end_klen);
+    const char *end_key   = lauxh_optlstring(L, 3, NULL, &end_klen);
+    size_t begin_vlen     = 0;
+    const char *begin_val = lauxh_optlstring(L, 4, NULL, &begin_vlen);
     size_t end_vlen       = 0;
-    const char *end_val   = lauxh_checklstring(L, 5, &end_vlen);
+    const char *end_val   = lauxh_optlstring(L, 5, NULL, &end_vlen);
     MDBX_val begin_k = {.iov_base = (void *)begin_key, .iov_len = begin_klen};
     MDBX_val begin_v = {.iov_base = (void *)begin_val, .iov_len = begin_vlen};
     MDBX_val end_k   = {.iov_base = (void *)end_key, .iov_len = end_klen};
     MDBX_val end_v   = {.iov_base = (void *)end_val, .iov_len = end_vlen};
     ptrdiff_t distance_items = 0;
-    int rc = mdbx_estimate_range(txn->txn, txn->dbi, &begin_k, &begin_v, &end_k,
-                                 &end_v, &distance_items);
+    int rc                   = mdbx_estimate_range(
+        txn->txn, txn->dbi, (begin_klen) ? &begin_k : NULL,
+        (begin_vlen) ? &begin_v : NULL, (end_klen) ? &end_k : NULL,
+        (end_vlen) ? &end_v : NULL, &distance_items);
 
     if (rc) {
         lua_pushnil(L);
