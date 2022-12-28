@@ -180,32 +180,6 @@ static int put_lua(lua_State *L)
     return 1;
 }
 
-// helper methods
-static int op_delete_lua(lua_State *L)
-{
-    int multi = lauxh_optboolean(L, 2, 0);
-
-    if (multi) {
-        // deletion all duplicates of key at the current position
-        lua_pushinteger(L, MDBX_ALLDUPS);
-    } else {
-        // deletion only the current entry
-        lua_pushinteger(L, MDBX_CURRENT);
-    }
-    lua_insert(L, 2);
-    return del_lua(L);
-}
-
-static int op_update_lua(lua_State *L)
-{
-    if (lua_gettop(L) < 3) {
-        lua_settop(L, 3);
-    }
-    lua_pushinteger(L, MDBX_CURRENT);
-    lua_insert(L, 4);
-    return put_lua(L);
-}
-
 static int get_batch_lua(lua_State *L)
 {
     lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
@@ -360,8 +334,6 @@ void lmdbx_cursor_init(lua_State *L)
         {"copy",              copy_lua             },
         {"get",               get_lua              },
         {"get_batch",         get_batch_lua        },
-        {"op_delete",         op_delete_lua        },
-        {"op_update",         op_update_lua        },
         {"put",               put_lua              },
         {"del",               del_lua              },
         {"count",             count_lua            },
