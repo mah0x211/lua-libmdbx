@@ -28,11 +28,11 @@
 static int estimate_move_lua(lua_State *L)
 {
     lmdbx_cursor_t *cur      = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
+    MDBX_cursor_op move_op   = lauxh_checkinteger(L, 2);
     size_t klen              = 0;
-    const char *key          = lauxh_checklstring(L, 2, &klen);
+    const char *key          = lauxh_optlstring(L, 3, NULL, &klen);
     size_t vlen              = 0;
-    const char *val          = lauxh_checklstring(L, 3, &vlen);
-    MDBX_cursor_op move_op   = lauxh_checkinteger(L, 4);
+    const char *val          = lauxh_optlstring(L, 4, NULL, &vlen);
     MDBX_val k               = {.iov_base = (void *)key, .iov_len = klen};
     MDBX_val v               = {.iov_base = (void *)val, .iov_len = vlen};
     ptrdiff_t distance_items = 0;
@@ -43,10 +43,7 @@ static int estimate_move_lua(lua_State *L)
         lmdbx_pusherror(L, rc);
         return 3;
     }
-    lua_createtable(L, 0, 3);
-    lauxh_pushstr2tbl(L, "key", k.iov_base);
-    lauxh_pushstr2tbl(L, "data", v.iov_base);
-    lauxh_pushint2tbl(L, "distance", distance_items);
+    lua_pushinteger(L, distance_items);
     return 1;
 }
 
