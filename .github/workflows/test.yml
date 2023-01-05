@@ -41,17 +41,17 @@ jobs:
       uses: actions/checkout@v2
       with:
         submodules: 'true'
-    -
-      name: Cache lua modules
-      id: cache-luarocks
-      uses: actions/cache@v3
-      with:
-        path: |
-          .lua
-          .luarocks
-        key: ${{ runner.os }}-${{ matrix.lua-version }}-cache-${{ hashFiles('rockspecs/libmdbx-scm-1.rockspec') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.lua-version }}-cache-
+    # -
+    #   name: Cache lua modules
+    #   id: cache-luarocks
+    #   uses: actions/cache@v3
+    #   with:
+    #     path: |
+    #       .lua
+    #       .luarocks
+    #     key: ${{ runner.os }}-${{ matrix.lua-version }}-cache-${{ hashFiles('rockspecs/libmdbx-scm-1.rockspec') }}
+    #     restore-keys: |
+    #       ${{ runner.os }}-${{ matrix.lua-version }}-cache-
     -
       name: Setup Lua ${{ matrix.lua-version }}
       uses: leafo/gh-actions-lua@v8.0.0
