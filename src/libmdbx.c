@@ -161,8 +161,8 @@ LUALIB_API int luaopen_libmdbx(lua_State *L)
     lmdbx_errno_init(L);
     lua_setfield(L, -2, "errno");
 
-    // lmdbx_debug_init(L);
-    // lua_setfield(L, -2, "debug");
+    lmdbx_debug_init(L);
+    lua_setfield(L, -2, "debug");
 
     lauxh_pushfn2tbl(L, "new", lmdbx_env_create_lua);
 

@@ -29,7 +29,7 @@
 static int dbi_sequence_lua(lua_State *L)
 {
     lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
-    uintptr_t incr   = lauxh_checkuint64(L, 2);
+    uintptr_t incr   = lauxh_optuint64(L, 2, 0);
     uint64_t result  = 0;
     int rc           = mdbx_dbi_sequence(txn->txn, txn->dbi, &result, incr);
 
@@ -68,20 +68,22 @@ static int estimate_range_lua(lua_State *L)
 {
     lmdbx_txn_t *txn      = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
     size_t begin_klen     = 0;
-    const char *begin_key = lauxh_checklstring(L, 2, &begin_klen);
-    size_t begin_vlen     = 0;
-    const char *begin_val = lauxh_checklstring(L, 3, &begin_vlen);
+    const char *begin_key = lauxh_optlstring(L, 2, NULL, &begin_klen);
     size_t end_klen       = 0;
-    const char *end_key   = lauxh_checklstring(L, 4, &end_klen);
+    const char *end_key   = lauxh_optlstring(L, 3, NULL, &end_klen);
+    size_t begin_vlen     = 0;
+    const char *begin_val = lauxh_optlstring(L, 4, NULL, &begin_vlen);
     size_t end_vlen       = 0;
-    const char *end_val   = lauxh_checklstring(L, 5, &end_vlen);
+    const char *end_val   = lauxh_optlstring(L, 5, NULL, &end_vlen);
     MDBX_val begin_k = {.iov_base = (void *)begin_key, .iov_len = begin_klen};
     MDBX_val begin_v = {.iov_base = (void *)begin_val, .iov_len = begin_vlen};
     MDBX_val end_k   = {.iov_base = (void *)end_key, .iov_len = end_klen};
     MDBX_val end_v   = {.iov_base = (void *)end_val, .iov_len = end_vlen};
     ptrdiff_t distance_items = 0;
-    int rc = mdbx_estimate_range(txn->txn, txn->dbi, &begin_k, &begin_v, &end_k,
-                                 &end_v, &distance_items);
+    int rc                   = mdbx_estimate_range(
+        txn->txn, txn->dbi, (begin_klen) ? &begin_k : NULL,
+        (begin_vlen) ? &begin_v : NULL, (end_klen) ? &end_k : NULL,
+        (end_vlen) ? &end_v : NULL, &distance_items);
 
     if (rc) {
         lua_pushnil(L);
@@ -146,6 +148,7 @@ static int replace_lua(lua_State *L)
     int rc            = mdbx_replace(txn->txn, txn->dbi, &k, new, &old, flags);
 
     if (rc == MDBX_RESULT_TRUE) {
+        // the buffer passed in is too small
         old.iov_base = alloca(old.iov_len);
         rc           = mdbx_replace(txn->txn, txn->dbi, &k, new, &old, flags);
     }
@@ -250,11 +253,9 @@ static int get_equal_or_great_lua(lua_State *L)
     switch (rc) {
     case MDBX_SUCCESS:
     case MDBX_RESULT_TRUE:
-        lua_createtable(L, 2, 0);
-        lua_pushlstring(L, k.iov_base, k.iov_len);
-        lua_rawseti(L, -2, 1);
-        lua_pushlstring(L, v.iov_base, v.iov_len);
-        lua_rawseti(L, -2, 2);
+        lua_createtable(L, 0, 2);
+        lauxh_pushlstr2tbl(L, "key", k.iov_base, k.iov_len);
+        lauxh_pushlstr2tbl(L, "data", v.iov_base, v.iov_len);
         return 1;
 
     case MDBX_NOTFOUND:
@@ -268,41 +269,17 @@ static int get_equal_or_great_lua(lua_State *L)
     }
 }
 
-static int get_ex_lua(lua_State *L)
-{
-    lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
-    size_t klen      = 0;
-    const char *key  = lauxh_checklstring(L, 2, &klen);
-    size_t count     = lauxh_optboolean(L, 3, 0);
-    MDBX_val k       = {.iov_base = (void *)key, .iov_len = klen};
-    MDBX_val v       = {0};
-    int rc = mdbx_get_ex(txn->txn, txn->dbi, &k, &v, (count) ? &count : NULL);
-
-    if (rc) {
-        lua_pushnil(L);
-        if (rc == MDBX_NOTFOUND) {
-            return 1;
-        }
-        lmdbx_pusherror(L, rc);
-        return 3;
-    }
-    lua_createtable(L, 2, 1);
-    lua_pushlstring(L, k.iov_base, k.iov_len);
-    lua_rawseti(L, -2, 1);
-    lua_pushlstring(L, v.iov_base, v.iov_len);
-    lua_rawseti(L, -2, 2);
-    lauxh_pushint2tbl(L, "count", count);
-    return 1;
-}
-
 static int get_lua(lua_State *L)
 {
     lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
     size_t klen      = 0;
     const char *key  = lauxh_checklstring(L, 2, &klen);
+    int do_count     = lauxh_optboolean(L, 3, 0);
     MDBX_val k       = {.iov_base = (void *)key, .iov_len = klen};
     MDBX_val v       = {0};
-    int rc           = mdbx_get(txn->txn, txn->dbi, &k, &v);
+    size_t count     = 0;
+    int rc = (do_count) ? mdbx_get_ex(txn->txn, txn->dbi, &k, &v, &count) :
+                          mdbx_get(txn->txn, txn->dbi, &k, &v);
 
     if (rc) {
         lua_pushnil(L);
@@ -313,6 +290,12 @@ static int get_lua(lua_State *L)
         return 3;
     }
     lua_pushlstring(L, v.iov_base, v.iov_len);
+    if (do_count) {
+        lua_pushnil(L);
+        lua_pushnil(L);
+        lua_pushinteger(L, count);
+        return 4;
+    }
     return 1;
 }
 
@@ -362,42 +345,42 @@ static int dbi_flags_lua(lua_State *L)
     lua_createtable(L, 0, 2);
     lua_createtable(L, 0, 0);
     if (flags & MDBX_REVERSEKEY) {
-        lauxh_pushstr2arr(L, -1, "REVERSEKEY");
+        lauxh_pushint2tbl(L, "REVERSEKEY", MDBX_REVERSEKEY);
     }
     if (flags & MDBX_DUPSORT) {
-        lauxh_pushstr2arr(L, -1, "DUPSORT");
+        lauxh_pushint2tbl(L, "DUPSORT", MDBX_DUPSORT);
     }
     if (flags & MDBX_INTEGERKEY) {
-        lauxh_pushstr2arr(L, -1, "INTEGERKEY");
+        lauxh_pushint2tbl(L, "INTEGERKEY", MDBX_INTEGERKEY);
     }
     if (flags & MDBX_DUPFIXED) {
-        lauxh_pushstr2arr(L, -1, "DUPFIXED");
+        lauxh_pushint2tbl(L, "DUPFIXED", MDBX_DUPFIXED);
     }
     if (flags & MDBX_INTEGERDUP) {
-        lauxh_pushstr2arr(L, -1, "INTEGERDUP");
+        lauxh_pushint2tbl(L, "INTEGERDUP", MDBX_INTEGERDUP);
     }
     if (flags & MDBX_REVERSEDUP) {
-        lauxh_pushstr2arr(L, -1, "REVERSEDUP");
+        lauxh_pushint2tbl(L, "REVERSEDUP", MDBX_REVERSEDUP);
     }
     if (flags & MDBX_CREATE) {
-        lauxh_pushstr2arr(L, -1, "CREATE");
+        lauxh_pushint2tbl(L, "CREATE", MDBX_CREATE);
     }
     if (flags & MDBX_DB_ACCEDE) {
-        lauxh_pushstr2arr(L, -1, "DB_ACCEDE");
+        lauxh_pushint2tbl(L, "DB_ACCEDE", MDBX_DB_ACCEDE);
     }
     lua_setfield(L, -2, "flags");
     lua_createtable(L, 0, 0);
     if (state & MDBX_DBI_DIRTY) {
-        lauxh_pushstr2arr(L, -1, "DBI_DIRTY");
+        lauxh_pushint2tbl(L, "DBI_DIRTY", MDBX_DBI_DIRTY);
     }
     if (state & MDBX_DBI_STALE) {
-        lauxh_pushstr2arr(L, -1, "DBI_STALE");
+        lauxh_pushint2tbl(L, "DBI_STALE", MDBX_DBI_STALE);
     }
     if (state & MDBX_DBI_FRESH) {
-        lauxh_pushstr2arr(L, -1, "DBI_FRESH");
+        lauxh_pushint2tbl(L, "DBI_FRESH", MDBX_DBI_FRESH);
     }
     if (state & MDBX_DBI_CREAT) {
-        lauxh_pushstr2arr(L, -1, "DBI_CREATE");
+        lauxh_pushint2tbl(L, "DBI_CREATE", MDBX_DBI_CREAT);
     }
     lua_setfield(L, -2, "state");
 
@@ -410,13 +393,20 @@ static int dbi_dupsort_depthmask_lua(lua_State *L)
     uint32_t mask    = 0;
     int rc           = mdbx_dbi_dupsort_depthmask(txn->txn, txn->dbi, &mask);
 
-    if (rc) {
+    switch (rc) {
+    case 0:
+        lua_pushinteger(L, mask);
+        return 1;
+
+    case MDBX_RESULT_TRUE:
+        lua_pushinteger(L, 0);
+        return 1;
+
+    default:
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
         return 3;
     }
-    lua_pushinteger(L, mask);
-    return 1;
 }
 
 static int dbi_stat_lua(lua_State *L)
@@ -478,70 +468,61 @@ static int reset_lua(lua_State *L)
     return 1;
 }
 
-static int break_lua(lua_State *L)
+#define EXEC_AS_COMMIT 0
+#define EXEC_AS_ABORT  1
+#define EXEC_AS_BREAK  2
+
+static inline int exec_txn(lua_State *L, int doas)
 {
     lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
-    int rc           = mdbx_txn_break(txn->txn);
+    int rc           = 0;
+
+    switch (doas) {
+    case EXEC_AS_COMMIT:
+        rc = mdbx_txn_commit(txn->txn);
+        break;
+    case EXEC_AS_ABORT:
+        rc = mdbx_txn_abort(txn->txn);
+        break;
+    case EXEC_AS_BREAK:
+        rc = mdbx_txn_break(txn->txn);
+        break;
+    }
+
+    if (rc == MDBX_THREAD_MISMATCH) {
+        lua_pushboolean(L, 0);
+        lmdbx_pusherror(L, rc);
+        return 3;
+    } else if (rc) {
+        lua_pushboolean(L, 0);
+        lmdbx_pusherror(L, rc);
+        return 3;
+    } else if (doas != EXEC_AS_BREAK) {
+        txn->env_ref = lauxh_unref(L, txn->env_ref);
+        txn->dbi     = 0;
+        txn->txn     = NULL;
+    }
 
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
         return 3;
     }
-
     lua_pushboolean(L, 1);
     return 1;
-}
-
-static inline void release_txn(lua_State *L, lmdbx_txn_t *txn)
-{
-    txn->env_ref = lauxh_unref(L, txn->env_ref);
-    txn->dbi     = 0;
-    txn->txn     = NULL;
 }
 
 static int abort_lua(lua_State *L)
 {
-    lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
-    int rc           = mdbx_txn_abort(txn->txn);
-
-    if (rc == MDBX_THREAD_MISMATCH) {
-        lua_pushboolean(L, 0);
-        lmdbx_pusherror(L, rc);
-        return 3;
+    if (lauxh_optboolean(L, 2, 0)) {
+        return exec_txn(L, EXEC_AS_BREAK);
     }
-    release_txn(L, txn);
-
-    if (rc) {
-        lua_pushboolean(L, 0);
-        lmdbx_pusherror(L, rc);
-        return 3;
-    }
-
-    lua_pushboolean(L, 1);
-    return 1;
+    return exec_txn(L, EXEC_AS_ABORT);
 }
 
 static int commit_lua(lua_State *L)
 {
-    lmdbx_txn_t *txn = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
-    int rc           = mdbx_txn_commit(txn->txn);
-
-    if (rc == MDBX_THREAD_MISMATCH) {
-        lua_pushboolean(L, 0);
-        lmdbx_pusherror(L, rc);
-        return 3;
-    }
-    release_txn(L, txn);
-
-    if (rc) {
-        lua_pushboolean(L, 0);
-        lmdbx_pusherror(L, rc);
-        return 3;
-    }
-
-    lua_pushboolean(L, 1);
-    return 1;
+    return exec_txn(L, EXEC_AS_COMMIT);
 }
 
 static int id_lua(lua_State *L)
@@ -598,7 +579,7 @@ static int env_lua(lua_State *L)
 static int info_lua(lua_State *L)
 {
     lmdbx_txn_t *txn   = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
-    int scan_rlt       = lauxh_checkboolean(L, 2);
+    int scan_rlt       = lauxh_optboolean(L, 2, 0);
     MDBX_txn_info info = {0};
     int rc             = mdbx_txn_info(txn->txn, &info, scan_rlt);
 
@@ -753,7 +734,6 @@ void lmdbx_txn_init(lua_State *L)
         {"id",                    id_lua                   },
         {"commit",                commit_lua               },
         {"abort",                 abort_lua                },
-        {"break",                 break_lua                },
         {"reset",                 reset_lua                },
         {"renew",                 renew_lua                },
         {"dbi_open",              dbi_open_lua             },
@@ -763,7 +743,6 @@ void lmdbx_txn_init(lua_State *L)
         {"dbi_close",             dbi_close_lua            },
         {"drop",                  drop_lua                 },
         {"get",                   get_lua                  },
-        {"get_ex",                get_ex_lua               },
         {"get_equal_or_great",    get_equal_or_great_lua   },
         {"op_insert",             op_insert_lua            }, // helper func
         {"op_upsert",             op_upsert_lua            }, // helper func

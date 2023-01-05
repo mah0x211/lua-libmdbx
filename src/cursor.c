@@ -28,11 +28,11 @@
 static int estimate_move_lua(lua_State *L)
 {
     lmdbx_cursor_t *cur      = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
+    MDBX_cursor_op move_op   = lauxh_checkinteger(L, 2);
     size_t klen              = 0;
-    const char *key          = lauxh_checklstring(L, 2, &klen);
+    const char *key          = lauxh_optlstring(L, 3, NULL, &klen);
     size_t vlen              = 0;
-    const char *val          = lauxh_checklstring(L, 3, &vlen);
-    MDBX_cursor_op move_op   = lauxh_checkinteger(L, 4);
+    const char *val          = lauxh_optlstring(L, 4, NULL, &vlen);
     MDBX_val k               = {.iov_base = (void *)key, .iov_len = klen};
     MDBX_val v               = {.iov_base = (void *)val, .iov_len = vlen};
     ptrdiff_t distance_items = 0;
@@ -43,10 +43,7 @@ static int estimate_move_lua(lua_State *L)
         lmdbx_pusherror(L, rc);
         return 3;
     }
-    lua_createtable(L, 0, 3);
-    lauxh_pushstr2tbl(L, "key", k.iov_base);
-    lauxh_pushstr2tbl(L, "data", v.iov_base);
-    lauxh_pushint2tbl(L, "distance", distance_items);
+    lua_pushinteger(L, distance_items);
     return 1;
 }
 
@@ -180,53 +177,29 @@ static int put_lua(lua_State *L)
     return 1;
 }
 
-// helper methods
-static int op_delete_lua(lua_State *L)
-{
-    int multi = lauxh_optboolean(L, 2, 0);
-
-    if (multi) {
-        // deletion all duplicates of key at the current position
-        lua_pushinteger(L, MDBX_ALLDUPS);
-    } else {
-        // deletion only the current entry
-        lua_pushinteger(L, MDBX_CURRENT);
-    }
-    lua_insert(L, 2);
-    return del_lua(L);
-}
-
-static int op_update_lua(lua_State *L)
-{
-    if (lua_gettop(L) < 3) {
-        lua_settop(L, 3);
-    }
-    lua_pushinteger(L, MDBX_CURRENT);
-    lua_insert(L, 4);
-    return put_lua(L);
-}
-
 static int get_batch_lua(lua_State *L)
 {
     lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
-    lua_Integer limit   = lauxh_optuint16(L, 2, 0x7F);
+    lua_Integer npair   = lauxh_optuint16(L, 2, 0xFF);
     lua_Integer op      = lauxh_optinteger(L, 3, MDBX_FIRST);
+    size_t limit        = npair * 2;
     size_t count        = 0;
     MDBX_val *pairs     = lua_newuserdata(L, sizeof(MDBX_val) * limit);
     int rc = mdbx_cursor_get_batch(cur->cur, &count, pairs, limit, op);
 
     if (rc) {
-        lua_pushnil(L);
         if (rc == MDBX_NOTFOUND) {
-            return 1;
+            return 0;
         }
+        lua_pushnil(L);
         lmdbx_pusherror(L, rc);
         return 3;
     }
-    lua_createtable(L, count, 0);
-    for (size_t i = 0; i < count; i++) {
+    lua_createtable(L, 0, count / 2);
+    for (size_t i = 0; i < count; i += 2) {
         lua_pushlstring(L, pairs[i].iov_base, pairs[i].iov_len);
-        lua_rawseti(L, -2, i + 1);
+        lua_pushlstring(L, pairs[i + 1].iov_base, pairs[i + 1].iov_len);
+        lua_rawset(L, -3);
     }
     return 1;
 }
@@ -234,23 +207,23 @@ static int get_batch_lua(lua_State *L)
 static int get_lua(lua_State *L)
 {
     lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
-    size_t klen         = 0;
-    const char *key     = lauxh_checklstring(L, 2, &klen);
-    lua_Integer op      = lauxh_optinteger(L, 3, MDBX_FIRST);
-    MDBX_val k          = {.iov_base = (void *)key, .iov_len = klen};
+    lua_Integer op      = lauxh_optinteger(L, 2, MDBX_FIRST);
+    MDBX_val k          = {0};
     MDBX_val v          = {0};
     int rc              = mdbx_cursor_get(cur->cur, &k, &v, op);
 
     if (rc) {
-        lua_pushnil(L);
         if (rc == MDBX_NOTFOUND) {
-            return 1;
+            return 0;
         }
+        lua_pushnil(L);
+        lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 4;
     }
+    lua_pushlstring(L, k.iov_base, k.iov_len);
     lua_pushlstring(L, v.iov_base, v.iov_len);
-    return 1;
+    return 2;
 }
 
 static int copy_lua(lua_State *L)
@@ -316,9 +289,11 @@ static int close_lua(lua_State *L)
 {
     lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
 
-    cur->cur     = NULL;
-    cur->txn_ref = lauxh_unref(L, cur->txn_ref);
-
+    if (cur->cur) {
+        mdbx_cursor_close(cur->cur);
+        cur->cur     = NULL;
+        cur->txn_ref = lauxh_unref(L, cur->txn_ref);
+    }
     return 0;
 }
 
@@ -356,8 +331,6 @@ void lmdbx_cursor_init(lua_State *L)
         {"copy",              copy_lua             },
         {"get",               get_lua              },
         {"get_batch",         get_batch_lua        },
-        {"op_delete",         op_delete_lua        },
-        {"op_update",         op_update_lua        },
         {"put",               put_lua              },
         {"del",               del_lua              },
         {"count",             count_lua            },

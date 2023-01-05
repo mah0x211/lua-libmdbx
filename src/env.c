@@ -36,6 +36,7 @@ static int thread_unregister_lua(lua_State *L)
     case 0:
     case MDBX_RESULT_TRUE:
         lua_pushboolean(L, 1);
+        return 1;
 
     default:
         lua_pushboolean(L, 0);
@@ -53,6 +54,7 @@ static int thread_register_lua(lua_State *L)
     case 0:
     case MDBX_RESULT_TRUE:
         lua_pushboolean(L, 1);
+        return 1;
 
     default:
         lua_pushboolean(L, 0);
@@ -71,6 +73,7 @@ static int reader_check_lua(lua_State *L)
     case 0:
     case MDBX_RESULT_TRUE:
         lua_pushinteger(L, dead);
+        return 1;
 
     default:
         lua_pushnil(L);
@@ -87,6 +90,7 @@ static int reader_list_func(void *ctx, int num, int slot, mdbx_pid_t pid,
 
     lua_State *L = (lua_State *)ctx;
     int top      = lua_gettop(L);
+    int errfn    = (top == 3) ? 3 : 0;
 
     lua_pushvalue(L, 2);
     lua_pushinteger(L, num);
@@ -96,11 +100,11 @@ static int reader_list_func(void *ctx, int num, int slot, mdbx_pid_t pid,
     lua_pushinteger(L, lag);
     lua_pushinteger(L, bytes_used);
     lua_pushinteger(L, bytes_retained);
-    if (lua_pcall(L, 0, lua_gettop(L) - top - 1, (top == 3) ? 3 : 0)) {
-        return -1;
+    if (lua_pcall(L, 7, 1, errfn)) {
+        return 1;
     }
     lua_settop(L, top);
-    return 0;
+    return MDBX_SUCCESS;
 }
 
 static int reader_list_lua(lua_State *L)
@@ -116,8 +120,11 @@ static int reader_list_lua(lua_State *L)
         lua_pushliteral(L, "traceback");
         lua_rawget(L, -2);
     }
-    if (lua_type(L, -1) != LUA_TFUNCTION) {
-        lua_pop(L, 1);
+    if (lua_type(L, -1) == LUA_TFUNCTION) {
+        lua_replace(L, 3);
+        lua_settop(L, 3);
+    } else {
+        lua_settop(L, 2);
     }
 
     rc = mdbx_reader_list(env->env, reader_list_func, (void *)L);
@@ -130,6 +137,7 @@ static int reader_list_lua(lua_State *L)
     case 0:
     case MDBX_RESULT_TRUE:
         lua_pushboolean(L, 1);
+        return 1;
 
     default:
         lua_pushboolean(L, 0);
@@ -369,36 +377,6 @@ static int set_flags_lua(lua_State *L)
     return 1;
 }
 
-static int close_lua(lua_State *L)
-{
-    lmdbx_env_t *env = lauxh_checkudata(L, 1, LMDBX_ENV_MT);
-    int dont_sync    = lauxh_optboolean(L, 2, 0);
-
-    if (getpid() != env->pid) {
-        lua_pushboolean(L, 0);
-        lua_pushstring(
-            L, "cannot be closed outside the process in which it was created");
-        return 2;
-    }
-
-    if (env->env) {
-        int rc = mdbx_env_close_ex(env->env, dont_sync);
-        if (rc == MDBX_BUSY) {
-            lua_pushboolean(L, 0);
-            return 1;
-        }
-
-        env->env = NULL;
-        if (rc) {
-            lua_pushboolean(L, 1);
-            lmdbx_pusherror(L, rc);
-            return 3;
-        }
-    }
-    lua_pushboolean(L, 1);
-    return 1;
-}
-
 static int get_syncperiod_lua(lua_State *L)
 {
     lmdbx_env_t *env                = lauxh_checkudata(L, 1, LMDBX_ENV_MT);
@@ -425,7 +403,7 @@ static int set_syncperiod_lua(lua_State *L)
         lmdbx_pusherror(L, rc);
         return 3;
     }
-    lua_pushboolean(L, 0);
+    lua_pushboolean(L, 1);
     return 1;
 }
 
@@ -455,7 +433,7 @@ static int set_syncbytes_lua(lua_State *L)
         lmdbx_pusherror(L, rc);
         return 3;
     }
-    lua_pushboolean(L, 0);
+    lua_pushboolean(L, 1);
     return 1;
 }
 
@@ -467,7 +445,7 @@ static int sync_poll_lua(lua_State *L)
     switch (rc) {
     case 0:
     case MDBX_RESULT_TRUE:
-        lua_pushboolean(L, 0);
+        lua_pushboolean(L, 1);
         return 1;
 
     default:
@@ -485,7 +463,7 @@ static int sync_lua(lua_State *L)
     switch (rc) {
     case 0:
     case MDBX_RESULT_TRUE:
-        lua_pushboolean(L, 0);
+        lua_pushboolean(L, 1);
         return 1;
 
     default:
@@ -584,6 +562,37 @@ static int delete_lua(lua_State *L)
     return 1;
 }
 
+static int close_lua(lua_State *L)
+{
+    lmdbx_env_t *env = lauxh_checkudata(L, 1, LMDBX_ENV_MT);
+    int dont_sync    = lauxh_optboolean(L, 2, 0);
+
+    if (getpid() != env->pid) {
+        lua_pushboolean(L, 0);
+        lua_pushstring(
+            L, "cannot be closed outside the process in which it was created");
+        return 2;
+    }
+
+    if (env->env) {
+        int rc = mdbx_env_close_ex(env->env, dont_sync);
+        if (rc == MDBX_BUSY) {
+            lua_pushboolean(L, 0);
+            lmdbx_pusherror(L, rc);
+            return 3;
+        }
+
+        env->env = NULL;
+        if (rc) {
+            lua_pushboolean(L, 1);
+            lmdbx_pusherror(L, rc);
+            return 3;
+        }
+    }
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
 static int open_lua(lua_State *L)
 {
     lmdbx_env_t *env     = lauxh_checkudata(L, 1, LMDBX_ENV_MT);
@@ -605,7 +614,7 @@ static int get_option_lua(lua_State *L)
 {
     lmdbx_env_t *env   = lauxh_checkudata(L, 1, LMDBX_ENV_MT);
     lua_Integer option = lauxh_checkinteger(L, 2);
-    uint64_t v         = lauxh_checkuint64(L, 3);
+    uint64_t v         = 0;
     int rc             = mdbx_env_get_option(env->env, option, &v);
 
     if (rc) {
