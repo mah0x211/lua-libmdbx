@@ -154,8 +154,8 @@ function testcase.op_update()
     -- test that return NOTFOUND error
     ok, err, errno = dbi:op_update('hello', 'bar', 'world')
     assert.is_false(ok)
-    assert.equal(errno, libmdbx.errno.NOTFOUND.errno)
-    assert.equal(err, libmdbx.errno.NOTFOUND.message)
+    assert.is_nil(err)
+    assert.is_nil(errno)
 end
 
 function testcase.replace()
@@ -191,11 +191,11 @@ function testcase.del()
     assert.is_true(dbi:del('foo', 'bar'))
     assert.is_nil(dbi:get('foo'))
 
-    -- test that return NOTFOUND error
+    -- test that return false without error
     local ok, err, errno = dbi:del('qux', 'baz')
     assert.is_false(ok)
-    assert.equal(errno, libmdbx.errno.NOTFOUND.errno)
-    assert.equal(err, libmdbx.errno.NOTFOUND.message)
+    assert.is_nil(err)
+    assert.is_nil(errno)
     assert.equal(dbi:get('qux'), 'quux')
 end
 
