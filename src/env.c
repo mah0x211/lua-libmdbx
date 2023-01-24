@@ -148,24 +148,7 @@ static int reader_list_lua(lua_State *L)
 
 static int begin_lua(lua_State *L)
 {
-    lmdbx_env_t *env  = lauxh_checkudata(L, 1, LMDBX_ENV_MT);
-    lua_Integer flags = lmdbx_checkflags(L, 2);
-    lmdbx_txn_t *txn  = lua_newuserdata(L, sizeof(lmdbx_txn_t));
-    int rc            = 0;
-
-    txn->env_ref = LUA_NOREF;
-    txn->dbi     = 0;
-    txn->txn     = NULL;
-    rc           = mdbx_txn_begin(env->env, NULL, flags, &txn->txn);
-    if (rc) {
-        lua_pushnil(L);
-        lmdbx_pusherror(L, rc);
-        return 3;
-    }
-    lauxh_setmetatable(L, LMDBX_TXN_MT);
-    txn->env_ref = lauxh_refat(L, 1);
-
-    return 1;
+    return lmdbx_txn_begin_lua(L);
 }
 
 static int get_maxvalsize_lua(lua_State *L)
@@ -670,16 +653,14 @@ static int tostring_lua(lua_State *L)
 int lmdbx_env_create_lua(lua_State *L)
 {
     lmdbx_env_t *env = lua_newuserdata(L, sizeof(lmdbx_env_t));
-    int rc           = 0;
+    int rc           = mdbx_env_create(&env->env);
 
-    env->pid = getpid();
-    env->env = NULL;
-    rc       = mdbx_env_create(&env->env);
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
         return 3;
     }
+    env->pid = getpid();
     lauxh_setmetatable(L, LMDBX_ENV_MT);
     return 1;
 }

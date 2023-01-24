@@ -224,19 +224,31 @@ int lmdbx_env_create_lua(lua_State *L);
 
 typedef struct {
     int env_ref;
-    MDBX_dbi dbi;
     MDBX_txn *txn;
 } lmdbx_txn_t;
 
 void lmdbx_txn_init(lua_State *L);
+int lmdbx_txn_begin_lua(lua_State *L);
+
+#define LMDBX_DBI_MT "libmdbx.dbi"
+
+typedef struct {
+    int txn_ref;
+    MDBX_dbi dbi;
+    lmdbx_txn_t *txn;
+} lmdbx_dbi_t;
+
+void lmdbx_dbi_init(lua_State *L);
+int lmdbx_dbi_open_lua(lua_State *L);
 
 #define LMDBX_CURSOR_MT "libmdbx.cursor"
 
 typedef struct {
-    int txn_ref;
+    int dbi_ref;
     MDBX_cursor *cur;
 } lmdbx_cursor_t;
 
 void lmdbx_cursor_init(lua_State *L);
+int lmdbx_cursor_open_lua(lua_State *L);
 
 #endif
