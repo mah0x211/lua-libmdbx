@@ -206,6 +206,41 @@ function testcase.get_both()
     assert.is_nil(err)
 end
 
+function testcase.get_both_range()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('bar', 'bar-value-2'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    assert(dbi:put('qux', 'qux-value-3'))
+    assert(dbi:put('qux', 'qux-value-5'))
+    local cur = assert(dbi:cursor())
+
+    -- test that retrieve first key-value pair equal to given key
+    local k, v, err = cur:get_both_range('qux')
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-1')
+    assert.is_nil(err)
+
+    -- test that retrieve key-value pair equal to given key-value
+    k, v, err = cur:get_both_range('qux', 'qux-value-5')
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-5')
+    assert.is_nil(err)
+
+    -- test that retrieve key-value pair equal to given key and value is greater than given value
+    k, v, err = cur:get_both_range('qux', 'qux-value-2')
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-3')
+    assert.is_nil(err)
+
+    -- test that return nil
+    k, v, err = cur:get_both_range('qux', 'raa')
+    assert.is_nil(k)
+    assert.is_nil(v)
+    assert.is_nil(err)
+end
+
 function testcase.get()
     local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
     assert(dbi:put('foo', 'foo-value-1'))
