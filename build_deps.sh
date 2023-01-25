@@ -8,7 +8,8 @@ if [ -e $DIRNAME ]; then
     rm -rf $DIRNAME
 fi
 
-git clone -b $MDBX_VERSION https://gitflic.ru/project/erthink/libmdbx.git $DIRNAME
+mkdir -p $DIRNAME
+wget -P $DIRNAME https://libmdbx.dqdkfa.ru/release/libmdbx-amalgamated-${MDBX_VERSION}.tar.gz
 cd ./deps/libmdbx
-git fetch --tags --force --prune
+tar xvzf libmdbx-amalgamated-${MDBX_VERSION}.tar.gz
 make lib

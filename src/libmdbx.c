@@ -146,6 +146,7 @@ LUALIB_API int luaopen_libmdbx(lua_State *L)
 {
     lmdbx_env_init(L);
     lmdbx_txn_init(L);
+    lmdbx_dbi_init(L);
     lmdbx_cursor_init(L);
 
     lua_newtable(L);
