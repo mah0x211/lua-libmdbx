@@ -74,6 +74,26 @@ function testcase.copy()
     assert.equal(cur2:dbi(), cur:dbi())
 end
 
+function testcase.set()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('foo', 'foo-value-2'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('bar', 'bar-value-2'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    local cur = assert(dbi:cursor())
+
+    -- test that retrieve value at given key
+    local v, err = assert(cur:set('foo'))
+    assert.equal(v, 'foo-value-1')
+    assert.is_nil(err)
+
+    -- test that return nil
+    v, err = cur:set('baz')
+    assert.is_nil(v)
+    assert.is_nil(err)
+end
+
 function testcase.get()
     local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
     assert(dbi:put('foo', 'foo-value-1'))
