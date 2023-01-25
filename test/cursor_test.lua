@@ -122,6 +122,40 @@ function testcase.set_range()
     assert.is_nil(err)
 end
 
+function testcase.set_lowerbound()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'a-value'))
+    assert(dbi:put('foo', 'b-value'))
+    assert(dbi:put('bar', 'a-value'))
+    assert(dbi:put('bar', 'b-value'))
+    assert(dbi:put('qux', 'a-value'))
+    local cur = assert(dbi:cursor())
+
+    -- test that retrieve first key-value pair greater to given key
+    local k, v, err = cur:set_lowerbound('ether')
+    assert.equal(k, 'foo')
+    assert.equal(v, 'a-value')
+    assert.is_nil(err)
+
+    -- test that retrieve first key-value pair equal to given key
+    k, v, err = assert(cur:set_lowerbound('bar'))
+    assert.equal(k, 'bar')
+    assert.equal(v, 'a-value')
+    assert.is_nil(err)
+
+    -- test that retrieve first key-value pair greater to given key-value
+    k, v, err = assert(cur:set_lowerbound('bar', 'c-value'))
+    assert.equal(k, 'foo')
+    assert.equal(v, 'a-value')
+    assert.is_nil(err)
+
+    -- test that return nil
+    k, v, err = cur:set_lowerbound('sar')
+    assert.is_nil(k)
+    assert.is_nil(v)
+    assert.is_nil(err)
+end
+
 function testcase.get()
     local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
     assert(dbi:put('foo', 'foo-value-1'))

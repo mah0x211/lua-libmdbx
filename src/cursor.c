@@ -232,6 +232,44 @@ static int get_lua(lua_State *L)
     return 2;
 }
 
+static inline int cursor_get_with_key_and_optvalue(lua_State *L, MDBX_val *k,
+                                                   MDBX_val *v,
+                                                   MDBX_cursor_op op)
+{
+    lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
+    k->iov_base         = (void *)lauxh_checklstring(L, 2, &k->iov_len);
+    v->iov_base         = (void *)lauxh_optlstring(L, 3, NULL, &v->iov_len);
+    return mdbx_cursor_get(cur->cur, k, v, op);
+}
+
+static int set_lowerbound_lua(lua_State *L)
+{
+    MDBX_val k = {0};
+    MDBX_val v = {0};
+    int rc = cursor_get_with_key_and_optvalue(L, &k, &v, MDBX_SET_LOWERBOUND);
+
+    if (rc) {
+        switch (rc) {
+        case MDBX_SUCCESS:
+        case MDBX_RESULT_TRUE:
+            break;
+
+        case MDBX_NOTFOUND:
+            return 0;
+
+        default:
+            lua_pushnil(L);
+            lua_pushnil(L);
+            lmdbx_pusherror(L, rc);
+            return 4;
+        }
+    }
+
+    lua_pushlstring(L, k.iov_base, k.iov_len);
+    lua_pushlstring(L, v.iov_base, v.iov_len);
+    return 2;
+}
+
 static inline int cursor_get_with_key(lua_State *L, MDBX_val *k, MDBX_val *v,
                                       MDBX_cursor_op op)
 {
@@ -389,6 +427,7 @@ void lmdbx_cursor_init(lua_State *L)
         {"copy",              copy_lua             },
         {"set",               set_lua              }, // helper func
         {"set_range",         set_range_lua        }, // helper func
+        {"set_lowerbound",    set_lowerbound_lua   }, // helper func
         {"get",               get_lua              },
         {"get_batch",         get_batch_lua        },
         {"put",               put_lua              },
