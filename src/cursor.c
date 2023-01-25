@@ -149,6 +149,9 @@ static int del_lua(lua_State *L)
 
     if (rc) {
         lua_pushboolean(L, 0);
+        if (rc == MDBX_NOTFOUND) {
+            return 1;
+        }
         lmdbx_pusherror(L, rc);
         return 3;
     }
@@ -170,6 +173,9 @@ static int put_lua(lua_State *L)
 
     if (rc) {
         lua_pushboolean(L, 0);
+        if (rc == MDBX_NOTFOUND) {
+            return 1;
+        }
         lmdbx_pusherror(L, rc);
         return 3;
     }

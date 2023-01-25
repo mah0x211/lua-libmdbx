@@ -90,6 +90,9 @@ static int del_lua(lua_State *L)
 
     if (rc) {
         lua_pushboolean(L, 0);
+        if (rc == MDBX_NOTFOUND) {
+            return 1;
+        }
         lmdbx_pusherror(L, rc);
         return 3;
     }
@@ -125,6 +128,9 @@ static int replace_lua(lua_State *L)
         return 1;
 
     default:
+        if (rc == MDBX_NOTFOUND) {
+            return 0;
+        }
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
         return 3;
@@ -145,6 +151,9 @@ static int put_lua(lua_State *L)
 
     if (rc) {
         lua_pushboolean(L, 0);
+        if (rc == MDBX_NOTFOUND) {
+            return 1;
+        }
         lmdbx_pusherror(L, rc);
         return 3;
     }
@@ -164,8 +173,8 @@ static int op_update_lua(lua_State *L)
         lua_pushinteger(L, MDBX_CURRENT);
         lua_pushinteger(L, MDBX_NOOVERWRITE);
         rc = replace_lua(L);
-        if (rc == 1) {
-            lua_pushboolean(L, 1);
+        if (rc <= 1) {
+            lua_pushboolean(L, rc);
             return 1;
         }
         lua_pushboolean(L, 0);
