@@ -83,9 +83,24 @@ function testcase.get()
     assert(dbi:put('qux', 'qux-value-2'))
     local cur = assert(dbi:cursor())
 
+    -- test that retrieve first key-value pairs
+    local k, v = assert(cur:get(libmdbx.FIRST))
+    assert.equal(k, 'bar')
+    assert.equal(v, 'bar-value-1')
+
+    -- test that retrieve next key-value pairs
+    k, v = assert(cur:get(libmdbx.NEXT))
+    assert.equal(k, 'foo')
+    assert.equal(v, 'foo-value-1')
+
+    -- test that retrieve current key-value pairs
+    k, v = assert(cur:get())
+    assert.equal(k, 'foo')
+    assert.equal(v, 'foo-value-1')
+
     -- test that retrieve key-value pairs by cursor
     local res = {}
-    local k, v = assert(cur:get())
+    k, v = assert(cur:get(libmdbx.FIRST))
     while k do
         local list = res[k]
         if not list then
@@ -111,7 +126,7 @@ function testcase.get()
 
     -- test that retrieve key-value pairs by cursor but skip duplicate values
     res = {}
-    k, v = assert(cur:get())
+    k, v = assert(cur:get(libmdbx.FIRST))
     while k do
         local list = res[k]
         if not list then

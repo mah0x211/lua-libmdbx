@@ -213,7 +213,7 @@ static int get_batch_lua(lua_State *L)
 static int get_lua(lua_State *L)
 {
     lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
-    lua_Integer op      = lauxh_optinteger(L, 2, MDBX_FIRST);
+    lua_Integer op      = lauxh_optinteger(L, 2, MDBX_GET_CURRENT);
     MDBX_val k          = {0};
     MDBX_val v          = {0};
     int rc              = mdbx_cursor_get(cur->cur, &k, &v, op);
