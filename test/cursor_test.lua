@@ -74,6 +74,368 @@ function testcase.copy()
     assert.equal(cur2:dbi(), cur:dbi())
 end
 
+function testcase.set()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('foo', 'foo-value-2'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('bar', 'bar-value-2'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    local cur = assert(dbi:cursor())
+
+    -- test that retrieve value at given key
+    local v, err = assert(cur:set('foo'))
+    assert.equal(v, 'foo-value-1')
+    assert.is_nil(err)
+
+    -- test that return nil
+    v, err = cur:set('baz')
+    assert.is_nil(v)
+    assert.is_nil(err)
+end
+
+function testcase.set_range()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('foo', 'foo-value-2'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('bar', 'bar-value-2'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    local cur = assert(dbi:cursor())
+
+    -- test that retrieve first key-value pair greater to given key
+    local k, v, err = assert(cur:set_range('ether'))
+    assert.equal(k, 'foo')
+    assert.equal(v, 'foo-value-1')
+    assert.is_nil(err)
+
+    -- test that retrieve first key-value pair equal to given key
+    k, v, err = assert(cur:set_range('qux'))
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-1')
+    assert.is_nil(err)
+
+    -- test that return nil
+    k, v, err = cur:set_range('sar')
+    assert.is_nil(k)
+    assert.is_nil(v)
+    assert.is_nil(err)
+end
+
+function testcase.set_lowerbound()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'a-value'))
+    assert(dbi:put('foo', 'b-value'))
+    assert(dbi:put('bar', 'a-value'))
+    assert(dbi:put('bar', 'b-value'))
+    assert(dbi:put('qux', 'a-value'))
+    local cur = assert(dbi:cursor())
+
+    -- test that retrieve first key-value pair greater to given key
+    local k, v, err = cur:set_lowerbound('ether')
+    assert.equal(k, 'foo')
+    assert.equal(v, 'a-value')
+    assert.is_nil(err)
+
+    -- test that retrieve first key-value pair equal to given key
+    k, v, err = assert(cur:set_lowerbound('bar'))
+    assert.equal(k, 'bar')
+    assert.equal(v, 'a-value')
+    assert.is_nil(err)
+
+    -- test that retrieve first key-value pair greater to given key-value
+    k, v, err = assert(cur:set_lowerbound('bar', 'c-value'))
+    assert.equal(k, 'foo')
+    assert.equal(v, 'a-value')
+    assert.is_nil(err)
+
+    -- test that return nil
+    k, v, err = cur:set_lowerbound('sar')
+    assert.is_nil(k)
+    assert.is_nil(v)
+    assert.is_nil(err)
+end
+
+function testcase.set_upperbound()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'a-value'))
+    assert(dbi:put('foo', 'b-value'))
+    assert(dbi:put('bar', 'a-value'))
+    assert(dbi:put('bar', 'b-value'))
+    assert(dbi:put('qux', 'a-value'))
+    local cur = assert(dbi:cursor())
+
+    -- test that retrieve first key-value pair greater to given key
+    local k, v, err = cur:set_upperbound('ether')
+    assert.equal(k, 'foo')
+    assert.equal(v, 'a-value')
+    assert.is_nil(err)
+
+    -- test that retrieve first key-value pair greater to given key-value
+    k, v, err = cur:set_upperbound('foo', 'b-value')
+    assert.equal(k, 'qux')
+    assert.equal(v, 'a-value')
+    assert.is_nil(err)
+
+    -- test that return nil
+    k, v, err = cur:set_upperbound('sar')
+    assert.is_nil(k)
+    assert.is_nil(v)
+    assert.is_nil(err)
+end
+
+function testcase.get_both()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('bar', 'bar-value-2'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    assert(dbi:put('qux', 'qux-value-2'))
+    local cur = assert(dbi:cursor())
+
+    -- test that retrieve key-value pair equal to given key-value
+    local k, v, err = cur:get_both('qux', 'qux-value-2')
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-2')
+    assert.is_nil(err)
+
+    -- test that return nil
+    k, v, err = cur:get_both('foo', 'foo-value-2')
+    assert.is_nil(k)
+    assert.is_nil(v)
+    assert.is_nil(err)
+end
+
+function testcase.get_both_range()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('bar', 'bar-value-2'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    assert(dbi:put('qux', 'qux-value-3'))
+    assert(dbi:put('qux', 'qux-value-5'))
+    local cur = assert(dbi:cursor())
+
+    -- test that retrieve first key-value pair equal to given key
+    local k, v, err = cur:get_both_range('qux')
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-1')
+    assert.is_nil(err)
+
+    -- test that retrieve key-value pair equal to given key-value
+    k, v, err = cur:get_both_range('qux', 'qux-value-5')
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-5')
+    assert.is_nil(err)
+
+    -- test that retrieve key-value pair equal to given key and value is greater than given value
+    k, v, err = cur:get_both_range('qux', 'qux-value-2')
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-3')
+    assert.is_nil(err)
+
+    -- test that return nil
+    k, v, err = cur:get_both_range('qux', 'raa')
+    assert.is_nil(k)
+    assert.is_nil(v)
+    assert.is_nil(err)
+end
+
+function testcase.get_first()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('bar', 'bar-value-2'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    local cur = assert(dbi:cursor())
+
+    -- test that retrieve first key-value pair
+    local k, v, err = cur:get_first()
+    assert.equal(k, 'bar')
+    assert.equal(v, 'bar-value-1')
+    assert.is_nil(err)
+end
+
+function testcase.get_first_dup()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('bar', 'bar-value-2'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    local cur = assert(dbi:cursor())
+
+    local k, v, err = cur:get_first()
+    assert.equal(k, 'bar')
+    assert.equal(v, 'bar-value-1')
+    assert.is_nil(err)
+    k, v = cur:get(libmdbx.NEXT)
+    assert.equal(k, 'bar')
+    assert.equal(v, 'bar-value-2')
+    assert.is_nil(err)
+
+    -- test that retrieve first value of current key
+    k, v, err = cur:get_first_dup()
+    assert.equal(k, '')
+    assert.equal(v, 'bar-value-1')
+    assert.is_nil(err)
+end
+
+function testcase.get_last()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    assert(dbi:put('qux', 'qux-value-2'))
+    local cur = assert(dbi:cursor())
+
+    -- test that retrieve last key-value pair
+    local k, v, err = cur:get_last()
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-2')
+    assert.is_nil(err)
+end
+
+function testcase.get_last_dup()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('bar', 'bar-value-2'))
+    assert(dbi:put('bar', 'bar-value-3'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    assert(dbi:put('qux', 'qux-value-2'))
+    local cur = assert(dbi:cursor())
+    local k, v, err = cur:get_first()
+    assert.equal(k, 'bar')
+    assert.equal(v, 'bar-value-1')
+    assert.is_nil(err)
+
+    -- test that retrieve last value of current key
+    k, v, err = cur:get_last_dup()
+    assert.equal(k, '')
+    assert.equal(v, 'bar-value-3')
+    assert.is_nil(err)
+end
+
+function testcase.get_next()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('bar', 'bar-value-2'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    local cur = assert(dbi:cursor())
+    local k, v, err = cur:get_first()
+    assert.equal(k, 'bar')
+    assert.equal(v, 'bar-value-1')
+    assert.is_nil(err)
+
+    -- test that retrieve next item
+    k, v, err = cur:get_next()
+    assert.equal(k, 'bar')
+    assert.equal(v, 'bar-value-2')
+    assert.is_nil(err)
+end
+
+function testcase.get_next_dup()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('bar', 'bar-value-2'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    local cur = assert(dbi:cursor())
+    local k, v, err = cur:get_first()
+    assert.equal(k, 'bar')
+    assert.equal(v, 'bar-value-1')
+    assert.is_nil(err)
+
+    -- test that retrieve next value of current key
+    k, v, err = cur:get_next_dup()
+    assert.equal(k, 'bar')
+    assert.equal(v, 'bar-value-2')
+    assert.is_nil(err)
+end
+
+function testcase.get_next_nodup()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('bar', 'bar-value-2'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    local cur = assert(dbi:cursor())
+    local k, v, err = cur:get_first()
+    assert.equal(k, 'bar')
+    assert.equal(v, 'bar-value-1')
+    assert.is_nil(err)
+
+    -- test that retrieve key-value pair of next key
+    k, v, err = cur:get_next_nodup()
+    assert.equal(k, 'foo')
+    assert.equal(v, 'foo-value-1')
+    assert.is_nil(err)
+end
+
+function testcase.get_prev()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    assert(dbi:put('qux', 'qux-value-2'))
+    local cur = assert(dbi:cursor())
+    local k, v, err = cur:get_both_range('foo')
+    assert.equal(k, 'foo')
+    assert.equal(v, 'foo-value-1')
+    assert.is_nil(err)
+
+    -- test that retrieve prev item
+    k, v, err = cur:get_prev()
+    assert.equal(k, 'bar')
+    assert.equal(v, 'bar-value-1')
+    assert.is_nil(err)
+end
+
+function testcase.get_prev_dup()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    assert(dbi:put('qux', 'qux-value-2'))
+    local cur = assert(dbi:cursor())
+    local k, v, err = cur:get_last()
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-2')
+    assert.is_nil(err)
+
+    -- test that retrieve prev value of current key
+    k, v, err = cur:get_prev_dup()
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-1')
+    assert.is_nil(err)
+
+    -- test that return nil
+    k, v, err = cur:get_prev_dup()
+    assert.is_nil(k)
+    assert.is_nil(v)
+    assert.is_nil(err)
+end
+
+function testcase.get_prev_nodup()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    assert(dbi:put('qux', 'qux-value-2'))
+    local cur = assert(dbi:cursor())
+    local k, v, err = cur:get_last()
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-2')
+    assert.is_nil(err)
+
+    -- test that retrieve key-value pair of prev key
+    k, v, err = cur:get_prev_nodup()
+    assert.equal(k, 'foo')
+    assert.equal(v, 'foo-value-1')
+    assert.is_nil(err)
+end
+
 function testcase.get()
     local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
     assert(dbi:put('foo', 'foo-value-1'))
@@ -83,9 +445,24 @@ function testcase.get()
     assert(dbi:put('qux', 'qux-value-2'))
     local cur = assert(dbi:cursor())
 
+    -- test that retrieve first key-value pairs
+    local k, v = assert(cur:get(libmdbx.FIRST))
+    assert.equal(k, 'bar')
+    assert.equal(v, 'bar-value-1')
+
+    -- test that retrieve next key-value pairs
+    k, v = assert(cur:get(libmdbx.NEXT))
+    assert.equal(k, 'foo')
+    assert.equal(v, 'foo-value-1')
+
+    -- test that retrieve current key-value pairs
+    k, v = assert(cur:get())
+    assert.equal(k, 'foo')
+    assert.equal(v, 'foo-value-1')
+
     -- test that retrieve key-value pairs by cursor
     local res = {}
-    local k, v = assert(cur:get())
+    k, v = assert(cur:get(libmdbx.FIRST))
     while k do
         local list = res[k]
         if not list then
@@ -111,7 +488,7 @@ function testcase.get()
 
     -- test that retrieve key-value pairs by cursor but skip duplicate values
     res = {}
-    k, v = assert(cur:get())
+    k, v = assert(cur:get(libmdbx.FIRST))
     while k do
         local list = res[k]
         if not list then

@@ -213,7 +213,31 @@ static int get_batch_lua(lua_State *L)
 static int get_lua(lua_State *L)
 {
     lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
-    lua_Integer op      = lauxh_optinteger(L, 2, MDBX_FIRST);
+    lua_Integer op      = lauxh_optinteger(L, 2, MDBX_GET_CURRENT);
+    MDBX_val k          = {0};
+    MDBX_val v          = {0};
+    int rc              = 0;
+
+    k.iov_base = (void *)lauxh_optlstring(L, 3, NULL, &k.iov_len);
+    v.iov_base = (void *)lauxh_optlstring(L, 4, NULL, &v.iov_len);
+    rc         = mdbx_cursor_get(cur->cur, &k, &v, op);
+    if (rc) {
+        if (rc == MDBX_NOTFOUND) {
+            return 0;
+        }
+        lua_pushnil(L);
+        lua_pushnil(L);
+        lmdbx_pusherror(L, rc);
+        return 4;
+    }
+    lua_pushlstring(L, k.iov_base, k.iov_len);
+    lua_pushlstring(L, v.iov_base, v.iov_len);
+    return 2;
+}
+
+static inline int cursor_get_with_noarg_lua(lua_State *L, MDBX_cursor_op op)
+{
+    lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
     MDBX_val k          = {0};
     MDBX_val v          = {0};
     int rc              = mdbx_cursor_get(cur->cur, &k, &v, op);
@@ -230,6 +254,211 @@ static int get_lua(lua_State *L)
     lua_pushlstring(L, k.iov_base, k.iov_len);
     lua_pushlstring(L, v.iov_base, v.iov_len);
     return 2;
+}
+
+static int get_prev_nodup_lua(lua_State *L)
+{
+    return cursor_get_with_noarg_lua(L, MDBX_PREV_NODUP);
+}
+
+static int get_prev_dup_lua(lua_State *L)
+{
+    return cursor_get_with_noarg_lua(L, MDBX_PREV_DUP);
+}
+
+static int get_prev_lua(lua_State *L)
+{
+    return cursor_get_with_noarg_lua(L, MDBX_PREV);
+}
+
+static int get_next_nodup_lua(lua_State *L)
+{
+    return cursor_get_with_noarg_lua(L, MDBX_NEXT_NODUP);
+}
+
+static int get_next_dup_lua(lua_State *L)
+{
+    return cursor_get_with_noarg_lua(L, MDBX_NEXT_DUP);
+}
+
+static int get_next_lua(lua_State *L)
+{
+    return cursor_get_with_noarg_lua(L, MDBX_NEXT);
+}
+
+static int get_last_dup_lua(lua_State *L)
+{
+    return cursor_get_with_noarg_lua(L, MDBX_LAST_DUP);
+}
+
+static int get_last_lua(lua_State *L)
+{
+    return cursor_get_with_noarg_lua(L, MDBX_LAST);
+}
+
+static int get_first_dup_lua(lua_State *L)
+{
+    return cursor_get_with_noarg_lua(L, MDBX_FIRST_DUP);
+}
+
+static int get_first_lua(lua_State *L)
+{
+    return cursor_get_with_noarg_lua(L, MDBX_FIRST);
+}
+
+static inline int cursor_get_with_key_and_optvalue(lua_State *L, MDBX_val *k,
+                                                   MDBX_val *v,
+                                                   MDBX_cursor_op op)
+{
+    lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
+    k->iov_base         = (void *)lauxh_checklstring(L, 2, &k->iov_len);
+    v->iov_base         = (void *)lauxh_optlstring(L, 3, NULL, &v->iov_len);
+    return mdbx_cursor_get(cur->cur, k, v, op);
+}
+
+static int get_both_range_lua(lua_State *L)
+{
+    MDBX_val k = {0};
+    MDBX_val v = {0};
+    int rc = cursor_get_with_key_and_optvalue(L, &k, &v, MDBX_GET_BOTH_RANGE);
+
+    if (rc) {
+        if (rc == MDBX_NOTFOUND) {
+            return 0;
+        }
+        lua_pushnil(L);
+        lua_pushnil(L);
+        lmdbx_pusherror(L, rc);
+        return 4;
+    }
+    lua_pushlstring(L, k.iov_base, k.iov_len);
+    lua_pushlstring(L, v.iov_base, v.iov_len);
+    return 2;
+}
+
+static int get_both_lua(lua_State *L)
+{
+    lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
+    MDBX_val k          = {0};
+    MDBX_val v          = {0};
+    int rc              = 0;
+
+    k.iov_base = (void *)lauxh_checklstring(L, 2, &k.iov_len);
+    v.iov_base = (void *)lauxh_checklstring(L, 3, &v.iov_len);
+    rc         = mdbx_cursor_get(cur->cur, &k, &v, MDBX_GET_BOTH);
+    if (rc) {
+        if (rc == MDBX_NOTFOUND) {
+            return 0;
+        }
+        lua_pushnil(L);
+        lua_pushnil(L);
+        lmdbx_pusherror(L, rc);
+        return 4;
+    }
+    lua_pushlstring(L, k.iov_base, k.iov_len);
+    lua_pushlstring(L, v.iov_base, v.iov_len);
+    return 2;
+}
+
+static int set_upperbound_lua(lua_State *L)
+{
+    MDBX_val k = {0};
+    MDBX_val v = {0};
+    int rc = cursor_get_with_key_and_optvalue(L, &k, &v, MDBX_SET_UPPERBOUND);
+
+    if (rc) {
+        switch (rc) {
+        case MDBX_SUCCESS:
+            break;
+
+        case MDBX_NOTFOUND:
+            return 0;
+
+        default:
+            lua_pushnil(L);
+            lua_pushnil(L);
+            lmdbx_pusherror(L, rc);
+            return 4;
+        }
+    }
+
+    lua_pushlstring(L, k.iov_base, k.iov_len);
+    lua_pushlstring(L, v.iov_base, v.iov_len);
+    return 2;
+}
+
+static int set_lowerbound_lua(lua_State *L)
+{
+    MDBX_val k = {0};
+    MDBX_val v = {0};
+    int rc = cursor_get_with_key_and_optvalue(L, &k, &v, MDBX_SET_LOWERBOUND);
+
+    if (rc) {
+        switch (rc) {
+        case MDBX_SUCCESS:
+        case MDBX_RESULT_TRUE:
+            break;
+
+        case MDBX_NOTFOUND:
+            return 0;
+
+        default:
+            lua_pushnil(L);
+            lua_pushnil(L);
+            lmdbx_pusherror(L, rc);
+            return 4;
+        }
+    }
+
+    lua_pushlstring(L, k.iov_base, k.iov_len);
+    lua_pushlstring(L, v.iov_base, v.iov_len);
+    return 2;
+}
+
+static inline int cursor_get_with_key(lua_State *L, MDBX_val *k, MDBX_val *v,
+                                      MDBX_cursor_op op)
+{
+    lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
+    k->iov_base         = (void *)lauxh_checklstring(L, 2, &k->iov_len);
+    return mdbx_cursor_get(cur->cur, k, v, op);
+}
+
+static int set_range_lua(lua_State *L)
+{
+    MDBX_val k = {0};
+    MDBX_val v = {0};
+    int rc     = cursor_get_with_key(L, &k, &v, MDBX_SET_RANGE);
+
+    if (rc) {
+        if (rc == MDBX_NOTFOUND) {
+            return 0;
+        }
+        lua_pushnil(L);
+        lua_pushnil(L);
+        lmdbx_pusherror(L, rc);
+        return 4;
+    }
+    lua_pushlstring(L, k.iov_base, k.iov_len);
+    lua_pushlstring(L, v.iov_base, v.iov_len);
+    return 2;
+}
+
+static int set_lua(lua_State *L)
+{
+    MDBX_val k = {0};
+    MDBX_val v = {0};
+    int rc     = cursor_get_with_key(L, &k, &v, MDBX_SET);
+
+    if (rc) {
+        if (rc == MDBX_NOTFOUND) {
+            return 0;
+        }
+        lua_pushnil(L);
+        lmdbx_pusherror(L, rc);
+        return 3;
+    }
+    lua_pushlstring(L, v.iov_base, v.iov_len);
+    return 1;
 }
 
 static int copy_lua(lua_State *L)
@@ -341,6 +570,22 @@ void lmdbx_cursor_init(lua_State *L)
         {"close",             close_lua            },
         {"renew",             renew_lua            },
         {"copy",              copy_lua             },
+        {"set",               set_lua              }, // helper func
+        {"set_range",         set_range_lua        }, // helper func
+        {"set_lowerbound",    set_lowerbound_lua   }, // helper func
+        {"set_upperbound",    set_upperbound_lua   }, // helper func
+        {"get_both",          get_both_lua         }, // helper func
+        {"get_both_range",    get_both_range_lua   }, // helper func
+        {"get_first",         get_first_lua        }, // helper func
+        {"get_first_dup",     get_first_dup_lua    }, // helper func
+        {"get_last",          get_last_lua         }, // helper func
+        {"get_last_dup",      get_last_dup_lua     }, // helper func
+        {"get_next",          get_next_lua         }, // helper func
+        {"get_next_dup",      get_next_dup_lua     }, // helper func
+        {"get_next_nodup",    get_next_nodup_lua   }, // helper func
+        {"get_prev",          get_prev_lua         }, // helper func
+        {"get_prev_dup",      get_prev_dup_lua     }, // helper func
+        {"get_prev_nodup",    get_prev_nodup_lua   }, // helper func
         {"get",               get_lua              },
         {"get_batch",         get_batch_lua        },
         {"put",               put_lua              },
