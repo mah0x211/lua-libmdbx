@@ -216,6 +216,30 @@ static int get_lua(lua_State *L)
     lua_Integer op      = lauxh_optinteger(L, 2, MDBX_GET_CURRENT);
     MDBX_val k          = {0};
     MDBX_val v          = {0};
+    int rc              = 0;
+
+    k.iov_base = (void *)lauxh_optlstring(L, 3, NULL, &k.iov_len);
+    v.iov_base = (void *)lauxh_optlstring(L, 4, NULL, &v.iov_len);
+    rc         = mdbx_cursor_get(cur->cur, &k, &v, op);
+    if (rc) {
+        if (rc == MDBX_NOTFOUND) {
+            return 0;
+        }
+        lua_pushnil(L);
+        lua_pushnil(L);
+        lmdbx_pusherror(L, rc);
+        return 4;
+    }
+    lua_pushlstring(L, k.iov_base, k.iov_len);
+    lua_pushlstring(L, v.iov_base, v.iov_len);
+    return 2;
+}
+
+static inline int cursor_get_with_noarg_lua(lua_State *L, MDBX_cursor_op op)
+{
+    lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
+    MDBX_val k          = {0};
+    MDBX_val v          = {0};
     int rc              = mdbx_cursor_get(cur->cur, &k, &v, op);
 
     if (rc) {
@@ -230,6 +254,11 @@ static int get_lua(lua_State *L)
     lua_pushlstring(L, k.iov_base, k.iov_len);
     lua_pushlstring(L, v.iov_base, v.iov_len);
     return 2;
+}
+
+static int get_first_lua(lua_State *L)
+{
+    return cursor_get_with_noarg_lua(L, MDBX_FIRST);
 }
 
 static inline int cursor_get_with_key_and_optvalue(lua_State *L, MDBX_val *k,
@@ -502,6 +531,7 @@ void lmdbx_cursor_init(lua_State *L)
         {"set_upperbound",    set_upperbound_lua   }, // helper func
         {"get_both",          get_both_lua         }, // helper func
         {"get_both_range",    get_both_range_lua   }, // helper func
+        {"get_first",         get_first_lua        }, // helper func
         {"get",               get_lua              },
         {"get_batch",         get_batch_lua        },
         {"put",               put_lua              },
