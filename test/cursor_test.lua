@@ -373,6 +373,25 @@ function testcase.get_next_nodup()
     assert.is_nil(err)
 end
 
+function testcase.get_prev()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    assert(dbi:put('qux', 'qux-value-2'))
+    local cur = assert(dbi:cursor())
+    local k, v, err = cur:get_both_range('foo')
+    assert.equal(k, 'foo')
+    assert.equal(v, 'foo-value-1')
+    assert.is_nil(err)
+
+    -- test that retrieve prev item
+    k, v, err = cur:get_prev()
+    assert.equal(k, 'bar')
+    assert.equal(v, 'bar-value-1')
+    assert.is_nil(err)
+end
+
 function testcase.get()
     local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
     assert(dbi:put('foo', 'foo-value-1'))
