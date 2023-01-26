@@ -392,6 +392,31 @@ function testcase.get_prev()
     assert.is_nil(err)
 end
 
+function testcase.get_prev_dup()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    assert(dbi:put('qux', 'qux-value-2'))
+    local cur = assert(dbi:cursor())
+    local k, v, err = cur:get_last()
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-2')
+    assert.is_nil(err)
+
+    -- test that retrieve prev value of current key
+    k, v, err = cur:get_prev_dup()
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-1')
+    assert.is_nil(err)
+
+    -- test that return nil
+    k, v, err = cur:get_prev_dup()
+    assert.is_nil(k)
+    assert.is_nil(v)
+    assert.is_nil(err)
+end
+
 function testcase.get()
     local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
     assert(dbi:put('foo', 'foo-value-1'))
