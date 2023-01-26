@@ -417,6 +417,25 @@ function testcase.get_prev_dup()
     assert.is_nil(err)
 end
 
+function testcase.get_prev_nodup()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    assert(dbi:put('qux', 'qux-value-2'))
+    local cur = assert(dbi:cursor())
+    local k, v, err = cur:get_last()
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-2')
+    assert.is_nil(err)
+
+    -- test that retrieve key-value pair of prev key
+    k, v, err = cur:get_prev_nodup()
+    assert.equal(k, 'foo')
+    assert.equal(v, 'foo-value-1')
+    assert.is_nil(err)
+end
+
 function testcase.get()
     local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
     assert(dbi:put('foo', 'foo-value-1'))
