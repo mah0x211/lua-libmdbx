@@ -96,17 +96,15 @@ function testcase.put_get()
     assert(dbi:put('foo', 'baz'))
 
     -- test that get item from a database
-    local v, err, eno, count = dbi:get('foo')
+    local v, err, count = dbi:get('foo')
     assert.equal(v, 'bar')
     assert.is_nil(err)
-    assert.is_nil(eno)
     assert.is_nil(count)
 
     -- test that get item and count from a database
-    v, err, eno, count = dbi:get('foo', true)
+    v, err, count = dbi:get('foo', true)
     assert.equal(v, 'bar')
     assert.is_nil(err)
-    assert.is_nil(eno)
     assert.equal(count, 2)
 end
 
@@ -118,10 +116,9 @@ function testcase.op_insert()
     assert.equal(dbi:get('hello'), 'world')
 
     -- test that return KEYEXIST error
-    local ok, err, errno = dbi:op_insert('hello', 'world2')
+    local ok, err = dbi:op_insert('hello', 'world2')
     assert.is_false(ok)
-    assert.equal(errno, libmdbx.errno.KEYEXIST.errno)
-    assert.equal(err, libmdbx.errno.KEYEXIST.message)
+    assert.equal(err, libmdbx.errno.KEYEXIST)
 end
 
 function testcase.op_upsert()
@@ -145,17 +142,15 @@ function testcase.op_update()
     assert.equal(dbi:get('hello'), 'world2')
 
     -- test that update value if matches to specified value
-    local ok, err, errno = dbi:op_update('hello', 'foo', 'world2')
+    local ok, err = dbi:op_update('hello', 'foo', 'world2')
     assert(ok, err)
     assert.is_true(ok)
-    assert.is_nil(errno)
     assert.equal(dbi:get('hello'), 'foo')
 
     -- test that return NOTFOUND error
-    ok, err, errno = dbi:op_update('hello', 'bar', 'world')
+    ok, err = dbi:op_update('hello', 'bar', 'world')
     assert.is_false(ok)
     assert.is_nil(err)
-    assert.is_nil(errno)
 end
 
 function testcase.replace()
@@ -163,16 +158,14 @@ function testcase.replace()
     assert(dbi:put('hello', 'world'))
 
     -- test that replace items in a database
-    local old, err, errno = dbi:replace('hello', 'foo')
+    local old, err = dbi:replace('hello', 'foo')
     assert(old, err)
-    assert.is_nil(errno)
     assert.equal(old, 'world')
     assert.equal(dbi:get('hello'), 'foo')
 
     -- test that add new value for key
-    old, err, errno = dbi:replace('bar', 'baz')
+    old, err = dbi:replace('bar', 'baz')
     assert(old, err)
-    assert.is_nil(errno)
     assert.equal(old, '')
     assert.equal(dbi:get('bar'), 'baz')
 end
@@ -192,10 +185,9 @@ function testcase.del()
     assert.is_nil(dbi:get('foo'))
 
     -- test that return false without error
-    local ok, err, errno = dbi:del('qux', 'baz')
+    local ok, err = dbi:del('qux', 'baz')
     assert.is_false(ok)
     assert.is_nil(err)
-    assert.is_nil(errno)
     assert.equal(dbi:get('qux'), 'quux')
 end
 

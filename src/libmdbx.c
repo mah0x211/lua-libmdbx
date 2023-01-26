@@ -144,28 +144,44 @@ static int is_readahead_reasonable_lua(lua_State *L)
 
 LUALIB_API int luaopen_libmdbx(lua_State *L)
 {
-    lmdbx_env_init(L);
-    lmdbx_txn_init(L);
-    lmdbx_dbi_init(L);
-    lmdbx_cursor_init(L);
-
-    lua_newtable(L);
-    lauxh_pushfn2tbl(L, "is_readahead_reasonable", is_readahead_reasonable_lua);
-    lauxh_pushfn2tbl(L, "limits_dbsize_min", limits_dbsize_min_lua);
-    lauxh_pushfn2tbl(L, "limits_dbsize_max", limits_dbsize_max_lua);
-    lauxh_pushfn2tbl(L, "limits_keysize_max", limits_keysize_max_lua);
-    lauxh_pushfn2tbl(L, "limits_valsize_max", limits_valsize_max_lua);
-    lauxh_pushfn2tbl(L, "limits_txnsize_max", limits_txnsize_max_lua);
-    lauxh_pushfn2tbl(L, "default_pagesize", default_pagesize_lua);
-    lauxh_pushfn2tbl(L, "get_sysraminfo", get_sysraminfo_lua);
+    int errno_ref = LUA_NOREF;
 
     lmdbx_errno_init(L);
+    errno_ref = lauxh_ref(L);
+
+    lmdbx_env_init(L, errno_ref);
+    lmdbx_txn_init(L, errno_ref);
+    lmdbx_dbi_init(L, errno_ref);
+    lmdbx_cursor_init(L, errno_ref);
+
+    lua_newtable(L);
+    lauxh_pushref(L, errno_ref);
     lua_setfield(L, -2, "errno");
 
     lmdbx_debug_init(L);
     lua_setfield(L, -2, "debug");
 
-    lauxh_pushfn2tbl(L, "new", lmdbx_env_create_lua);
+#define pushfn2tbl(name, func)                                                 \
+ do {                                                                          \
+  lua_pushstring(L, (name));                                                   \
+  lauxh_pushref(L, errno_ref);                                                 \
+  lua_pushcclosure(L, (func), 1);                                              \
+  lua_rawset(L, -3);                                                           \
+ } while (0)
+
+    pushfn2tbl("is_readahead_reasonable", is_readahead_reasonable_lua);
+    pushfn2tbl("limits_dbsize_min", limits_dbsize_min_lua);
+    pushfn2tbl("limits_dbsize_max", limits_dbsize_max_lua);
+    pushfn2tbl("limits_keysize_max", limits_keysize_max_lua);
+    pushfn2tbl("limits_valsize_max", limits_valsize_max_lua);
+    pushfn2tbl("limits_txnsize_max", limits_txnsize_max_lua);
+    pushfn2tbl("default_pagesize", default_pagesize_lua);
+    pushfn2tbl("get_sysraminfo", get_sysraminfo_lua);
+
+    pushfn2tbl("new", lmdbx_env_create_lua);
+    errno_ref = lauxh_unref(L, errno_ref);
+
+#undef pushfn2tbl
 
     // libmdbx version information
     lua_createtable(L, 0, 6);

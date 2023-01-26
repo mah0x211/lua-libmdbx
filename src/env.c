@@ -41,7 +41,7 @@ static int thread_unregister_lua(lua_State *L)
     default:
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
 }
 
@@ -59,7 +59,7 @@ static int thread_register_lua(lua_State *L)
     default:
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
 }
 
@@ -78,7 +78,7 @@ static int reader_check_lua(lua_State *L)
     default:
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
 }
 
@@ -142,7 +142,7 @@ static int reader_list_lua(lua_State *L)
     default:
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
 }
 
@@ -180,7 +180,7 @@ static int get_maxdbs_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushinteger(L, dbs);
     return 1;
@@ -195,7 +195,7 @@ static int set_maxdbs_lua(lua_State *L)
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -210,7 +210,7 @@ static int get_maxreaders_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushinteger(L, readers);
     return 1;
@@ -225,7 +225,7 @@ static int set_maxreaders_lua(lua_State *L)
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -246,7 +246,7 @@ static int set_geometry_lua(lua_State *L)
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -261,7 +261,7 @@ static int get_fd_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushinteger(L, fd);
     return 1;
@@ -276,7 +276,7 @@ static int get_path_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushstring(L, dest);
     return 1;
@@ -291,7 +291,7 @@ static int get_flags_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
 
     lua_newtable(L);
@@ -354,7 +354,7 @@ static int set_flags_lua(lua_State *L)
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -369,7 +369,7 @@ static int get_syncperiod_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushinteger(L, period_seconds_16dot16);
     return 1;
@@ -384,7 +384,7 @@ static int set_syncperiod_lua(lua_State *L)
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -399,7 +399,7 @@ static int get_syncbytes_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushinteger(L, threshold);
     return 1;
@@ -414,7 +414,7 @@ static int set_syncbytes_lua(lua_State *L)
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -434,7 +434,7 @@ static int sync_poll_lua(lua_State *L)
     default:
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
 }
 
@@ -452,7 +452,7 @@ static int sync_lua(lua_State *L)
     default:
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
 }
 
@@ -465,7 +465,7 @@ static int info_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lmdbx_pushenvinfo(L, &info);
     return 1;
@@ -480,7 +480,7 @@ static int stat_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lmdbx_pushstat(L, &stat);
     return 1;
@@ -496,7 +496,7 @@ static int copy2fd_lua(lua_State *L)
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -512,7 +512,7 @@ static int copy_lua(lua_State *L)
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -528,18 +528,18 @@ static int delete_lua(lua_State *L)
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     } else if (!pathname) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, MDBX_ENOFILE);
-        return 3;
+        return 2;
     }
 
     rc = mdbx_env_delete(pathname, mode);
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -562,14 +562,14 @@ static int close_lua(lua_State *L)
         if (rc == MDBX_BUSY) {
             lua_pushboolean(L, 0);
             lmdbx_pusherror(L, rc);
-            return 3;
+            return 2;
         }
 
         env->env = NULL;
         if (rc) {
             lua_pushboolean(L, 1);
             lmdbx_pusherror(L, rc);
-            return 3;
+            return 2;
         }
     }
     lua_pushboolean(L, 1);
@@ -587,7 +587,7 @@ static int open_lua(lua_State *L)
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -603,7 +603,7 @@ static int get_option_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushinteger(L, v);
     return 1;
@@ -619,7 +619,7 @@ static int set_option_lua(lua_State *L)
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -658,14 +658,14 @@ int lmdbx_env_create_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     env->pid = getpid();
     lauxh_setmetatable(L, LMDBX_ENV_MT);
     return 1;
 }
 
-void lmdbx_env_init(lua_State *L)
+void lmdbx_env_init(lua_State *L, int errno_ref)
 {
     struct luaL_Reg mmethod[] = {
         {"__tostring", tostring_lua},
@@ -712,11 +712,11 @@ void lmdbx_env_init(lua_State *L)
     // create metatable
     luaL_newmetatable(L, LMDBX_ENV_MT);
     // metamethods
-    lmdbx_register(L, mmethod);
+    lmdbx_register(L, mmethod, errno_ref);
     // methods
     lua_pushstring(L, "__index");
     lua_newtable(L);
-    lmdbx_register(L, method);
+    lmdbx_register(L, method, errno_ref);
     lua_rawset(L, -3);
     lua_pop(L, 1);
 }

@@ -38,10 +38,9 @@ function testcase.set_get_option()
     assert.equal(env:get_option(libmdbx.opt_max_readers), 123)
 
     -- test that return error if option is invalid
-    local v, err, eno = env:get_option(-123)
+    local v, err = env:get_option(-123)
     assert.is_nil(v)
-    assert.equal(err, libmdbx.errno.EINVAL.message)
-    assert.equal(eno, libmdbx.errno.EINVAL.errno)
+    assert.equal(err, libmdbx.errno.EINVAL)
 end
 
 function testcase.open()
@@ -72,18 +71,15 @@ function testcase.delete()
     assert.is_true(env:delete())
 
     -- test that already deleted
-    local ok, err, eno = env:delete()
+    local ok, err = env:delete()
     assert.is_false(ok)
-    assert.equal(err, libmdbx.errno.RESULT_TRUE.message)
-    assert.equal(eno, libmdbx.errno.RESULT_TRUE.errno)
+    assert.equal(err, libmdbx.errno.RESULT_TRUE)
 
     -- test that cannot be deleted if env is not yet open
     env = assert(libmdbx.new())
-    ok, err, eno = env:delete()
+    ok, err = env:delete()
     assert.is_false(ok)
-    assert.equal(err, libmdbx.errno.EPERM.message)
-    assert.equal(eno, libmdbx.errno.EPERM.errno)
-
+    assert.equal(err, libmdbx.errno.EPERM)
 end
 
 function testcase.copy()
@@ -129,10 +125,9 @@ function testcase.stat()
 
     -- test that cannot be get the db stat
     env = assert(libmdbx.new())
-    local stat, err, eno = env:stat()
+    local stat, err = env:stat()
     assert.is_nil(stat)
-    assert.equal(err, libmdbx.errno.EPERM.message)
-    assert.equal(eno, libmdbx.errno.EPERM.errno)
+    assert.equal(err, libmdbx.errno.EPERM)
 end
 
 function testcase.info()
@@ -154,10 +149,9 @@ function testcase.sync()
 
     -- test that cannot be flush the env data if its not yet open
     env = assert(libmdbx.new())
-    local ok, err, eno = env:sync()
+    local ok, err = env:sync()
     assert.is_false(ok)
-    assert.equal(err, libmdbx.errno.EPERM.message)
-    assert.equal(eno, libmdbx.errno.EPERM.errno)
+    assert.equal(err, libmdbx.errno.EPERM)
 end
 
 function testcase.sync_poll()
@@ -168,10 +162,9 @@ function testcase.sync_poll()
 
     -- test that cannot be flush the env data if its not yet open
     env = assert(libmdbx.new())
-    local ok, err, eno = env:sync_poll()
+    local ok, err = env:sync_poll()
     assert.is_false(ok)
-    assert.equal(err, libmdbx.errno.EPERM.message)
-    assert.equal(eno, libmdbx.errno.EPERM.errno)
+    assert.equal(err, libmdbx.errno.EPERM)
 end
 
 function testcase.set_get_syncbytes()
@@ -183,10 +176,9 @@ function testcase.set_get_syncbytes()
 
     -- test that cannot be flush the env data if its not yet open
     env = assert(libmdbx.new())
-    local ok, err, eno = env:set_syncbytes(1024)
+    local ok, err = env:set_syncbytes(1024)
     assert.is_false(ok)
-    assert.equal(err, libmdbx.errno.EPERM.message)
-    assert.equal(eno, libmdbx.errno.EPERM.errno)
+    assert.equal(err, libmdbx.errno.EPERM)
 end
 
 function testcase.set_get_syncperiod()
@@ -200,17 +192,15 @@ function testcase.set_get_syncperiod()
 
     -- test that cannot be sets the sync period
     env = assert(libmdbx.new())
-    local ok, err, eno = env:set_syncperiod(1000)
+    local ok, err = env:set_syncperiod(1000)
     assert.is_false(ok)
-    assert.equal(err, libmdbx.errno.EPERM.message)
-    assert.equal(eno, libmdbx.errno.EPERM.errno)
+    assert.equal(err, libmdbx.errno.EPERM)
 
     -- test that cannot be get the sync period
     local v
-    v, err, eno = env:get_syncperiod()
+    v, err = env:get_syncperiod()
     assert.is_nil(v)
-    assert.equal(err, libmdbx.errno.EPERM.message)
-    assert.equal(eno, libmdbx.errno.EPERM.errno)
+    assert.equal(err, libmdbx.errno.EPERM)
 end
 
 function testcase.set_get_flags()
@@ -297,10 +287,9 @@ function testcase.set_get_maxreaders()
 
     -- test that fail if env is open
     env = openenv()
-    local ok, err, eno = env:set_maxreaders(10)
+    local ok, err = env:set_maxreaders(10)
     assert.is_false(ok)
-    assert.equal(err, libmdbx.errno.EPERM.message)
-    assert.equal(eno, libmdbx.errno.EPERM.errno)
+    assert.equal(err, libmdbx.errno.EPERM)
 end
 
 function testcase.set_get_maxdbs()
@@ -314,10 +303,9 @@ function testcase.set_get_maxdbs()
 
     -- test that fail if env is open
     env = openenv()
-    local ok, err, eno = env:set_maxdbs(10)
+    local ok, err = env:set_maxdbs(10)
     assert.is_false(ok)
-    assert.equal(err, libmdbx.errno.EPERM.message)
-    assert.equal(eno, libmdbx.errno.EPERM.errno)
+    assert.equal(err, libmdbx.errno.EPERM)
 end
 
 function testcase.get_maxkeysize()

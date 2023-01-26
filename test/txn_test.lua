@@ -132,10 +132,9 @@ function testcase.reset()
 
     -- test that cannot reset non read-only transaction
     txn = assert(env:begin())
-    local ok, err, eno = txn:reset()
+    local ok, err = txn:reset()
     assert.is_false(ok)
-    assert.equal(err, libmdbx.errno.EINVAL.message)
-    assert.equal(eno, libmdbx.errno.EINVAL.errno)
+    assert.equal(err, libmdbx.errno.EINVAL)
 end
 
 function testcase.renew()
@@ -148,10 +147,9 @@ function testcase.renew()
 
     -- test that cannot renew non read-only transaction
     txn = assert(env:begin())
-    local ok, err, eno = txn:renew()
+    local ok, err = txn:renew()
     assert.is_false(ok)
-    assert.equal(err, libmdbx.errno.EINVAL.message)
-    assert.equal(eno, libmdbx.errno.EINVAL.errno)
+    assert.equal(err, libmdbx.errno.EINVAL)
 end
 
 function testcase.dbi_open()
