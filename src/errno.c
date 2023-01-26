@@ -55,7 +55,7 @@ void lmdbx_errno_init(lua_State *L)
     // create metatable
     luaL_newmetatable(L, LMDBX_ERRNO_MT);
     // metamethods
-    lmdbx_register(L, mmethod);
+    lmdbx_register(L, mmethod, LUA_NOREF);
     lua_pop(L, 1);
 
     // Errors and return codes
@@ -64,7 +64,6 @@ void lmdbx_errno_init(lua_State *L)
     register_errno(L, "RESULT_FALSE", MDBX_RESULT_FALSE);
     register_errno(L, "RESULT_TRUE", MDBX_RESULT_TRUE);
     register_errno(L, "KEYEXIST", MDBX_KEYEXIST);
-    register_errno(L, "FIRST_LMDB_ERRCODE", MDBX_FIRST_LMDB_ERRCODE);
     register_errno(L, "NOTFOUND", MDBX_NOTFOUND);
     register_errno(L, "PAGE_NOTFOUND", MDBX_PAGE_NOTFOUND);
     register_errno(L, "CORRUPTED", MDBX_CORRUPTED);

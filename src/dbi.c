@@ -36,7 +36,7 @@ static int sequence_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushinteger(L, result);
     return 1;
@@ -66,7 +66,7 @@ static int estimate_range_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushinteger(L, distance_items);
     return 1;
@@ -94,7 +94,7 @@ static int del_lua(lua_State *L)
             return 1;
         }
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -133,7 +133,7 @@ static int replace_lua(lua_State *L)
         }
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
 }
 
@@ -155,7 +155,7 @@ static int put_lua(lua_State *L)
             return 1;
         }
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -239,7 +239,7 @@ static int get_equal_or_great_lua(lua_State *L)
     default:
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
 }
 
@@ -261,14 +261,13 @@ static int get_lua(lua_State *L)
         }
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushlstring(L, v.iov_base, v.iov_len);
     if (do_count) {
         lua_pushnil(L);
-        lua_pushnil(L);
         lua_pushinteger(L, count);
-        return 4;
+        return 3;
     }
     return 1;
 }
@@ -283,7 +282,7 @@ static int flags_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_createtable(L, 0, 2);
     lua_createtable(L, 0, 0);
@@ -348,7 +347,7 @@ static int dupsort_depthmask_lua(lua_State *L)
     default:
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
 }
 
@@ -361,7 +360,7 @@ static int stat_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lmdbx_pushstat(L, &stat);
     return 1;
@@ -381,7 +380,7 @@ static int drop_lua(lua_State *L)
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     } else if (del) {
         dbi->txn     = &TXN_NULL;
         dbi->txn_ref = lauxh_unref(L, dbi->txn_ref);
@@ -400,7 +399,7 @@ static int close_lua(lua_State *L)
         if (rc) {
             lua_pushboolean(L, 0);
             lmdbx_pusherror(L, rc);
-            return 3;
+            return 2;
         }
         dbi->txn     = &TXN_NULL;
         dbi->txn_ref = lauxh_unref(L, dbi->txn_ref);
@@ -445,7 +444,7 @@ int lmdbx_dbi_open_lua(lua_State *L)
         }
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lauxh_setmetatable(L, LMDBX_DBI_MT);
     dbi->txn     = txn;
@@ -454,7 +453,7 @@ int lmdbx_dbi_open_lua(lua_State *L)
     return 1;
 }
 
-void lmdbx_dbi_init(lua_State *L)
+void lmdbx_dbi_init(lua_State *L, int errno_ref)
 {
     struct luaL_Reg mmethod[] = {
         {"__tostring", tostring_lua},
@@ -485,11 +484,11 @@ void lmdbx_dbi_init(lua_State *L)
     // create metatable
     luaL_newmetatable(L, LMDBX_DBI_MT);
     // metamethods
-    lmdbx_register(L, mmethod);
+    lmdbx_register(L, mmethod, errno_ref);
     // methods
     lua_pushstring(L, "__index");
     lua_newtable(L);
-    lmdbx_register(L, method);
+    lmdbx_register(L, method, errno_ref);
     lua_rawset(L, -3);
     lua_pop(L, 1);
 }

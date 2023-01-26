@@ -29,14 +29,19 @@
 
 static inline void lmdbx_pusherror(lua_State *L, int errnum)
 {
-    lua_pushstring(L, mdbx_strerror(errnum));
-    lua_pushinteger(L, errnum);
+    lua_pushvalue(L, lua_upvalueindex(1));
+    lua_rawgeti(L, -1, errnum);
+    lua_replace(L, -2);
 }
 
-static inline void lmdbx_register(lua_State *L, struct luaL_Reg *reg)
+static inline void lmdbx_register(lua_State *L, struct luaL_Reg *reg,
+                                  int errno_ref)
 {
     while (reg->name) {
-        lauxh_pushfn2tbl(L, reg->name, reg->func);
+        lua_pushstring(L, reg->name);
+        lauxh_pushref(L, errno_ref);
+        lua_pushcclosure(L, reg->func, 1);
+        lua_rawset(L, -3);
         reg++;
     }
 }
@@ -217,7 +222,7 @@ typedef struct {
     MDBX_env *env;
 } lmdbx_env_t;
 
-void lmdbx_env_init(lua_State *L);
+void lmdbx_env_init(lua_State *L, int errno_ref);
 int lmdbx_env_create_lua(lua_State *L);
 
 #define LMDBX_TXN_MT "libmdbx.txn"
@@ -227,7 +232,7 @@ typedef struct {
     MDBX_txn *txn;
 } lmdbx_txn_t;
 
-void lmdbx_txn_init(lua_State *L);
+void lmdbx_txn_init(lua_State *L, int errno_ref);
 int lmdbx_txn_begin_lua(lua_State *L);
 
 #define LMDBX_DBI_MT "libmdbx.dbi"
@@ -238,7 +243,7 @@ typedef struct {
     lmdbx_txn_t *txn;
 } lmdbx_dbi_t;
 
-void lmdbx_dbi_init(lua_State *L);
+void lmdbx_dbi_init(lua_State *L, int errno_ref);
 int lmdbx_dbi_open_lua(lua_State *L);
 
 #define LMDBX_CURSOR_MT "libmdbx.cursor"
@@ -248,7 +253,7 @@ typedef struct {
     MDBX_cursor *cur;
 } lmdbx_cursor_t;
 
-void lmdbx_cursor_init(lua_State *L);
+void lmdbx_cursor_init(lua_State *L, int errno_ref);
 int lmdbx_cursor_open_lua(lua_State *L);
 
 #endif

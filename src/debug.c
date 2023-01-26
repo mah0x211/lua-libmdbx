@@ -156,5 +156,5 @@ void lmdbx_debug_init(lua_State *L)
     };
 
     lua_newtable(L);
-    lmdbx_register(L, funcs);
+    lmdbx_register(L, funcs, LUA_NOREF);
 }

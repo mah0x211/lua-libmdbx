@@ -1,8 +1,6 @@
 local testcase = require('testcase')
 local libmdbx = require('libmdbx')
 
--- print(dump(libmdbx.errno))
-
 local PATHNAME = './test.db'
 local LOCKFILE = PATHNAME .. libmdbx.LOCK_SUFFIX
 
@@ -545,10 +543,9 @@ function testcase.put()
 
     -- test that cannot store current value if key does not matched
     k = assert(cur:get())
-    local ok, err, eno = cur:put(k .. '-mismatch', 'updated', libmdbx.CURRENT)
+    local ok, err = cur:put(k .. '-mismatch', 'updated', libmdbx.CURRENT)
     assert.is_false(ok)
-    assert.equal(err, libmdbx.errno.EKEYMISMATCH.message)
-    assert.equal(eno, libmdbx.errno.EKEYMISMATCH.errno)
+    assert.equal(err, libmdbx.errno.EKEYMISMATCH)
 end
 
 function testcase.del()

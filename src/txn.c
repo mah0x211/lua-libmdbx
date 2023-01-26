@@ -40,7 +40,7 @@ static int is_dirty_lua(lua_State *L)
     default:
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
 }
 
@@ -57,7 +57,7 @@ static int renew_lua(lua_State *L)
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -71,7 +71,7 @@ static int reset_lua(lua_State *L)
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -101,11 +101,11 @@ static inline int exec_txn(lua_State *L, int doas)
     if (rc == MDBX_THREAD_MISMATCH) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     } else if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     } else if (doas != EXEC_AS_BREAK) {
         txn->env_ref = lauxh_unref(L, txn->env_ref);
         txn->txn     = NULL;
@@ -114,7 +114,7 @@ static inline int exec_txn(lua_State *L, int doas)
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_pushboolean(L, 1);
     return 1;
@@ -190,7 +190,7 @@ static int info_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lua_createtable(L, 0, 8);
     // struct MDBX_txn_info {
@@ -246,7 +246,7 @@ static int begin_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lauxh_setmetatable(L, LMDBX_TXN_MT);
     lauxh_pushref(L, txn->env_ref);
@@ -264,7 +264,7 @@ static int env_info_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lmdbx_pushenvinfo(L, &info);
     return 1;
@@ -279,7 +279,7 @@ static int env_stat_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lmdbx_pushstat(L, &stat);
     return 1;
@@ -318,7 +318,7 @@ int lmdbx_txn_begin_lua(lua_State *L)
     if (rc) {
         lua_pushnil(L);
         lmdbx_pusherror(L, rc);
-        return 3;
+        return 2;
     }
     lauxh_setmetatable(L, LMDBX_TXN_MT);
     txn->env_ref = lauxh_refat(L, 1);
@@ -326,7 +326,7 @@ int lmdbx_txn_begin_lua(lua_State *L)
     return 1;
 }
 
-void lmdbx_txn_init(lua_State *L)
+void lmdbx_txn_init(lua_State *L, int errno_ref)
 {
     struct luaL_Reg mmethod[] = {
         {"__tostring", tostring_lua},
@@ -353,11 +353,11 @@ void lmdbx_txn_init(lua_State *L)
     // create metatable
     luaL_newmetatable(L, LMDBX_TXN_MT);
     // metamethods
-    lmdbx_register(L, mmethod);
+    lmdbx_register(L, mmethod, errno_ref);
     // methods
     lua_pushstring(L, "__index");
     lua_newtable(L);
-    lmdbx_register(L, method);
+    lmdbx_register(L, method, errno_ref);
     lua_rawset(L, -3);
     lua_pop(L, 1);
 }

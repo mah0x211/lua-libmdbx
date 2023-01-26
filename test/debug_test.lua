@@ -2,8 +2,6 @@ local unpack = unpack or table.unpack
 local testcase = require('testcase')
 local libmdbx = require('libmdbx')
 
--- print(dump(libmdbx.errno))
-
 local PATHNAME = './test.db'
 local LOCKFILE = PATHNAME .. libmdbx.LOCK_SUFFIX
 local DEBUG_DEFAULTS
