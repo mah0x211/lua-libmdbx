@@ -256,6 +256,11 @@ static inline int cursor_get_with_noarg_lua(lua_State *L, MDBX_cursor_op op)
     return 2;
 }
 
+static int get_last_lua(lua_State *L)
+{
+    return cursor_get_with_noarg_lua(L, MDBX_LAST);
+}
+
 static int get_first_dup_lua(lua_State *L)
 {
     return cursor_get_with_noarg_lua(L, MDBX_FIRST_DUP);
@@ -538,6 +543,7 @@ void lmdbx_cursor_init(lua_State *L)
         {"get_both_range",    get_both_range_lua   }, // helper func
         {"get_first",         get_first_lua        }, // helper func
         {"get_first_dup",     get_first_dup_lua    }, // helper func
+        {"get_last",          get_last_lua         }, // helper func
         {"get",               get_lua              },
         {"get_batch",         get_batch_lua        },
         {"put",               put_lua              },

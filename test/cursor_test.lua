@@ -280,6 +280,21 @@ function testcase.get_first_dup()
     assert.is_nil(err)
 end
 
+function testcase.get_last()
+    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    assert(dbi:put('foo', 'foo-value-1'))
+    assert(dbi:put('bar', 'bar-value-1'))
+    assert(dbi:put('qux', 'qux-value-1'))
+    assert(dbi:put('qux', 'qux-value-2'))
+    local cur = assert(dbi:cursor())
+
+    -- test that retrieve last key-value pair
+    local k, v, err = cur:get_last()
+    assert.equal(k, 'qux')
+    assert.equal(v, 'qux-value-2')
+    assert.is_nil(err)
+end
+
 function testcase.get()
     local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
     assert(dbi:put('foo', 'foo-value-1'))
