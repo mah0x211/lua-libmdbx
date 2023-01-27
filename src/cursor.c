@@ -467,7 +467,7 @@ static int copy_lua(lua_State *L)
     lmdbx_cursor_t *dst = lua_newuserdata(L, sizeof(lmdbx_cursor_t));
     int rc              = 0;
 
-    dst->dbi_ref = LUA_NOREF;
+    dst->txn_ref = LUA_NOREF;
     dst->cur     = mdbx_cursor_create(NULL);
     if (!dst->cur) {
         lua_pushnil(L);
@@ -479,8 +479,8 @@ static int copy_lua(lua_State *L)
         return 2;
     }
     lauxh_setmetatable(L, LMDBX_CURSOR_MT);
-    lauxh_pushref(L, cur->dbi_ref);
-    dst->dbi_ref = lauxh_ref(L);
+    lauxh_pushref(L, cur->txn_ref);
+    dst->txn_ref = lauxh_ref(L);
 
     return 1;
 }
@@ -488,16 +488,17 @@ static int copy_lua(lua_State *L)
 static int renew_lua(lua_State *L)
 {
     lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
-    lmdbx_dbi_t *dbi    = lauxh_checkudata(L, 2, LMDBX_DBI_MT);
-    int rc              = mdbx_cursor_renew(dbi->txn->txn, cur->cur);
+    lmdbx_txn_t *txn    = lauxh_checkudata(L, 2, LMDBX_TXN_MT);
+    int rc              = mdbx_cursor_renew(txn->txn, cur->cur);
 
     if (rc) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
         return 2;
     }
-    lauxh_unref(L, cur->dbi_ref);
-    cur->dbi_ref = lauxh_refat(L, 2);
+    lua_settop(L, 2);
+    lauxh_unref(L, cur->txn_ref);
+    cur->txn_ref = lauxh_ref(L);
     lua_pushboolean(L, 1);
 
     return 1;
@@ -510,27 +511,21 @@ static int close_lua(lua_State *L)
     if (cur->cur) {
         mdbx_cursor_close(cur->cur);
         cur->cur     = NULL;
-        cur->dbi_ref = lauxh_unref(L, cur->dbi_ref);
+        cur->txn_ref = lauxh_unref(L, cur->txn_ref);
     }
     return 0;
 }
 
-static int dbi_lua(lua_State *L)
+static int txn_lua(lua_State *L)
 {
     lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
-    lauxh_pushref(L, cur->dbi_ref);
+    lauxh_pushref(L, cur->txn_ref);
     return 1;
 }
 
 static int gc_lua(lua_State *L)
 {
-    lmdbx_cursor_t *cur = lauxh_checkudata(L, 1, LMDBX_CURSOR_MT);
-
-    if (cur->cur) {
-        mdbx_cursor_close(cur->cur);
-        cur->cur     = NULL;
-        cur->dbi_ref = lauxh_unref(L, cur->dbi_ref);
-    }
+    close_lua(L);
     return 0;
 }
 
@@ -544,8 +539,9 @@ static int tostring_lua(lua_State *L)
 int lmdbx_cursor_open_lua(lua_State *L)
 {
     lmdbx_dbi_t *dbi    = lauxh_checkudata(L, 1, LMDBX_DBI_MT);
+    lmdbx_txn_t *txn    = lauxh_checkudata(L, 2, LMDBX_TXN_MT);
     lmdbx_cursor_t *cur = lua_newuserdata(L, sizeof(lmdbx_cursor_t));
-    int rc              = mdbx_cursor_open(dbi->txn->txn, dbi->dbi, &cur->cur);
+    int rc              = mdbx_cursor_open(txn->txn, dbi->dbi, &cur->cur);
 
     if (rc) {
         lua_pushnil(L);
@@ -553,7 +549,7 @@ int lmdbx_cursor_open_lua(lua_State *L)
         return 2;
     }
     lauxh_setmetatable(L, LMDBX_CURSOR_MT);
-    cur->dbi_ref = lauxh_refat(L, 1);
+    cur->txn_ref = lauxh_refat(L, 2);
 
     return 1;
 }
@@ -566,7 +562,7 @@ void lmdbx_cursor_init(lua_State *L, int errno_ref)
         {NULL,         NULL        }
     };
     struct luaL_Reg method[] = {
-        {"dbi",               dbi_lua              },
+        {"txn",               txn_lua              },
         {"close",             close_lua            },
         {"renew",             renew_lua            },
         {"copy",              copy_lua             },

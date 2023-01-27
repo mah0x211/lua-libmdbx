@@ -26,12 +26,13 @@ end
 
 local function opentxn(...)
     local env = assert(openenv(...))
-    return env:begin()
+    return assert(env:begin())
 end
 
 local function opendbi(...)
-    local txn = assert(opentxn())
-    return assert(txn:dbi_open(...))
+    local txn = opentxn()
+    local dbi = assert(txn:dbi_open(...))
+    return dbi, txn
 end
 
 function testcase.txn()
@@ -47,21 +48,21 @@ function testcase.close()
 end
 
 function testcase.drop()
-    local dbi = assert(opendbi())
+    local dbi = opendbi()
 
     -- test that empty or delete and close a database
     assert.is_true(dbi:drop())
 end
 
 function testcase.stat()
-    local dbi = assert(opendbi())
+    local dbi = opendbi()
 
     -- test that retrieve statistics for a database
     assert.is_table(dbi:stat())
 end
 
 function testcase.dupsort_depthmask()
-    local env = assert(openenv())
+    local env = openenv()
     local txn = assert(env:begin(libmdbx.TXN_RDONLY))
     local dbi = assert(txn:dbi_open())
 
@@ -71,8 +72,8 @@ function testcase.dupsort_depthmask()
 end
 
 function testcase.flags()
-    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE,
-                               libmdbx.REVERSEKEY))
+    local dbi =
+        opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE, libmdbx.REVERSEKEY)
 
     -- test that retrieve the DB flags and status for a database handle
     assert(dbi:put('hello', 'world'))
@@ -89,7 +90,7 @@ function testcase.flags()
 end
 
 function testcase.put_get()
-    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    local dbi = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
 
     -- test that store items into a database
     assert(dbi:put('foo', 'bar'))
@@ -109,7 +110,7 @@ function testcase.put_get()
 end
 
 function testcase.op_insert()
-    local dbi = assert(opendbi())
+    local dbi = opendbi()
 
     -- test that insert value for key
     assert(dbi:op_insert('hello', 'world'))
@@ -122,7 +123,7 @@ function testcase.op_insert()
 end
 
 function testcase.op_upsert()
-    local dbi = assert(opendbi())
+    local dbi = opendbi()
 
     -- test that upsert value for key
     assert(dbi:op_upsert('hello', 'world'))
@@ -154,7 +155,7 @@ function testcase.op_update()
 end
 
 function testcase.replace()
-    local dbi = assert(opendbi())
+    local dbi = opendbi()
     assert(dbi:put('hello', 'world'))
 
     -- test that replace items in a database
@@ -171,7 +172,7 @@ function testcase.replace()
 end
 
 function testcase.del()
-    local dbi = assert(opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE))
+    local dbi = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
     assert(dbi:put('hello', 'world'))
     assert(dbi:put('foo', 'bar'))
     assert(dbi:put('qux', 'quux'))
@@ -192,15 +193,15 @@ function testcase.del()
 end
 
 function testcase.cursor_open()
-    local dbi = assert(opendbi())
+    local dbi, txn = opendbi()
 
     -- test that create a cursor handle for the specified transaction and DBI handle
-    local cur = assert(dbi:cursor_open())
+    local cur = assert(dbi:cursor_open(txn))
     assert.match(cur, '^libmdbx.cursor: ', false)
 end
 
 function testcase.estimate_range()
-    local dbi = assert(opendbi())
+    local dbi = opendbi()
     assert(dbi:put('hello', 'world'))
     assert(dbi:put('foo', 'bar'))
     assert(dbi:put('baa', 'baz'))
@@ -227,7 +228,7 @@ function testcase.estimate_range()
 end
 
 function testcase.sequence()
-    local dbi = assert(opendbi())
+    local dbi = opendbi()
 
     -- test that sequence generation for a database
     local seq = 0

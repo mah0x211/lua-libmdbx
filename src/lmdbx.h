@@ -249,7 +249,7 @@ int lmdbx_dbi_open_lua(lua_State *L);
 #define LMDBX_CURSOR_MT "libmdbx.cursor"
 
 typedef struct {
-    int dbi_ref;
+    int txn_ref;
     MDBX_cursor *cur;
 } lmdbx_cursor_t;
 
