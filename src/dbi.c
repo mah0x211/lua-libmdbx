@@ -72,7 +72,7 @@ static int estimate_range_lua(lua_State *L)
     return 1;
 }
 
-static int cursor_lua(lua_State *L)
+static int cursor_open_lua(lua_State *L)
 {
     return lmdbx_cursor_open_lua(L);
 }
@@ -475,7 +475,7 @@ void lmdbx_dbi_init(lua_State *L, int errno_ref)
         {"put",                put_lua               },
         {"replace",            replace_lua           },
         {"del",                del_lua               },
-        {"cursor",             cursor_lua            },
+        {"cursor_open",        cursor_open_lua       },
         {"estimate_range",     estimate_range_lua    },
         {"sequence",           sequence_lua          },
         {NULL,                 NULL                  }
