@@ -16,6 +16,8 @@ end
 
 local function openenv(...)
     local env = assert(libmdbx.new())
+
+    assert(env:set_maxdbs(10))
     assert(env:open(PATHNAME, nil, libmdbx.NOSUBDIR, libmdbx.COALESCE,
                     libmdbx.LIFORECLAIM, ...))
     return env
@@ -173,7 +175,16 @@ function testcase.dbi_open()
     local txn = assert(opentxn())
 
     -- test that open or create a database in the environment
-    assert.match(txn:dbi_open(), '^libmdbx.dbi: ', false)
+    local dbi = assert(txn:dbi_open('foo', libmdbx.CREATE))
+    assert.match(dbi, '^libmdbx.dbi: ', false)
+
+    -- test that create new dbi
+    local dbi2 = assert(txn:dbi_open('bar', libmdbx.CREATE))
+    assert.not_equal(dbi, dbi2)
+
+    -- test that return same dbi if dbi is already open
+    assert.equal(txn:dbi_open('foo'), dbi)
+    assert.equal(txn:dbi_open('bar'), dbi2)
 end
 
 function testcase.is_dirty()

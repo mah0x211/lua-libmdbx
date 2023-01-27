@@ -41,6 +41,12 @@ static int close_lua(lua_State *L)
             lmdbx_pusherror(L, rc);
             return 2;
         }
+
+        // push index table
+        lauxh_pushref(L, env->dbis_ref);
+        // remove dbi from index table
+        lua_pushnil(L);
+        lua_rawseti(L, -2, dbi->dbi);
         dbi->env_ref = lauxh_unref(L, dbi->env_ref);
     }
     lua_pushboolean(L, 1);
@@ -80,9 +86,18 @@ int lmdbx_dbi_open_lua(lua_State *L)
     lmdbx_txn_t *txn  = lauxh_checkudata(L, 1, LMDBX_TXN_MT);
     const char *name  = lauxh_optstring(L, 2, NULL);
     lua_Integer flags = lmdbx_checkflags(L, 3);
-    lmdbx_dbi_t *dbi  = lua_newuserdata(L, sizeof(lmdbx_dbi_t));
-    int rc            = mdbx_dbi_open(txn->txn, name, flags, &dbi->dbi);
+    lmdbx_env_t *env  = NULL;
+    lmdbx_dbi_t *dbi  = NULL;
+    int rc            = 0;
 
+    // push index table
+    lua_settop(L, 2);
+    lauxh_pushref(L, txn->env_ref);
+    env = lauxh_checkudata(L, -1, LMDBX_ENV_MT);
+    lauxh_pushref(L, env->dbis_ref);
+
+    dbi = lua_newuserdata(L, sizeof(lmdbx_dbi_t));
+    rc  = mdbx_dbi_open(txn->txn, name, flags, &dbi->dbi);
     if (rc) {
         if (rc == MDBX_NOTFOUND) {
             return 0;
@@ -91,9 +106,18 @@ int lmdbx_dbi_open_lua(lua_State *L)
         lmdbx_pusherror(L, rc);
         return 2;
     }
-    lauxh_setmetatable(L, LMDBX_DBI_MT);
-    lauxh_pushref(L, txn->env_ref);
-    dbi->env_ref = lauxh_ref(L);
+
+    // get the dbi with same id
+    lua_rawgeti(L, 4, dbi->dbi);
+    if (lua_isnoneornil(L, -1)) {
+        lua_pop(L, 1);
+        // create new dbi object
+        lauxh_setmetatable(L, LMDBX_DBI_MT);
+        dbi->env_ref = lauxh_refat(L, 3);
+        // add dbi to index table
+        lua_pushvalue(L, -1);
+        lua_rawseti(L, 4, dbi->dbi);
+    }
 
     return 1;
 }

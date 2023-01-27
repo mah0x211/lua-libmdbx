@@ -219,6 +219,7 @@ void lmdbx_debug_init(lua_State *L);
 
 typedef struct {
     pid_t pid;
+    int dbis_ref;
     MDBX_env *env;
 } lmdbx_env_t;
 
