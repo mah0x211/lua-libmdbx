@@ -538,10 +538,9 @@ static int tostring_lua(lua_State *L)
 
 int lmdbx_cursor_open_lua(lua_State *L)
 {
-    lmdbx_dbi_t *dbi    = lauxh_checkudata(L, 1, LMDBX_DBI_MT);
-    lmdbx_txn_t *txn    = lauxh_checkudata(L, 2, LMDBX_TXN_MT);
+    lmdbx_dbh_t *dbh    = lauxh_checkudata(L, 1, LMDBX_DBH_MT);
     lmdbx_cursor_t *cur = lua_newuserdata(L, sizeof(lmdbx_cursor_t));
-    int rc              = mdbx_cursor_open(txn->txn, dbi->dbi, &cur->cur);
+    int rc = mdbx_cursor_open(dbh->txn->txn, dbh->dbi->dbi, &cur->cur);
 
     if (rc) {
         lua_pushnil(L);
@@ -549,7 +548,8 @@ int lmdbx_cursor_open_lua(lua_State *L)
         return 2;
     }
     lauxh_setmetatable(L, LMDBX_CURSOR_MT);
-    cur->txn_ref = lauxh_refat(L, 2);
+    lauxh_pushref(L, dbh->txn_ref);
+    cur->txn_ref = lauxh_ref(L);
 
     return 1;
 }

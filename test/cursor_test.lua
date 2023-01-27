@@ -32,17 +32,22 @@ local function opendbi(...)
     return dbi, txn
 end
 
+local function opendbh(...)
+    local dbi, txn = opendbi(...)
+    return assert(dbi:dbh_open(txn))
+end
+
 function testcase.txn()
-    local dbi, txn = opendbi()
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh()
+    local cur = assert(dbh:cursor_open())
 
     -- test that return the associated txn
-    assert.equal(cur:txn(), txn)
+    assert.equal(cur:txn(), dbh:txn())
 end
 
 function testcase.close()
-    local dbi, txn = opendbi()
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh()
+    local cur = assert(dbh:cursor_open())
 
     -- test that close a cursor handle
     cur:close()
@@ -52,7 +57,8 @@ function testcase.renew()
     local env = openenv(libmdbx.NOTLS)
     local txn = assert(env:begin(libmdbx.TXN_RDONLY))
     local dbi = assert(txn:dbi_open())
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = assert(dbi:dbh_open(txn))
+    local cur = assert(dbh:cursor_open())
     assert.equal(cur:txn(), txn)
 
     -- test that renew a cursor handle
@@ -63,8 +69,8 @@ function testcase.renew()
 end
 
 function testcase.copy()
-    local dbi, txn = opendbi()
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh()
+    local cur = assert(dbh:cursor_open())
 
     -- test that copy cursor position and state
     local cur2 = assert(cur:copy())
@@ -74,13 +80,13 @@ function testcase.copy()
 end
 
 function testcase.set()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('foo', 'foo-value-2'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('bar', 'bar-value-2'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('foo', 'foo-value-2'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('bar', 'bar-value-2'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    local cur = assert(dbh:cursor_open())
 
     -- test that retrieve value at given key
     local v, err = assert(cur:set('foo'))
@@ -94,13 +100,13 @@ function testcase.set()
 end
 
 function testcase.set_range()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('foo', 'foo-value-2'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('bar', 'bar-value-2'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('foo', 'foo-value-2'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('bar', 'bar-value-2'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    local cur = assert(dbh:cursor_open())
 
     -- test that retrieve first key-value pair greater to given key
     local k, v, err = assert(cur:set_range('ether'))
@@ -122,13 +128,13 @@ function testcase.set_range()
 end
 
 function testcase.set_lowerbound()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'a-value'))
-    assert(dbi:put('foo', 'b-value'))
-    assert(dbi:put('bar', 'a-value'))
-    assert(dbi:put('bar', 'b-value'))
-    assert(dbi:put('qux', 'a-value'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'a-value'))
+    assert(dbh:put('foo', 'b-value'))
+    assert(dbh:put('bar', 'a-value'))
+    assert(dbh:put('bar', 'b-value'))
+    assert(dbh:put('qux', 'a-value'))
+    local cur = assert(dbh:cursor_open())
 
     -- test that retrieve first key-value pair greater to given key
     local k, v, err = cur:set_lowerbound('ether')
@@ -156,13 +162,13 @@ function testcase.set_lowerbound()
 end
 
 function testcase.set_upperbound()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'a-value'))
-    assert(dbi:put('foo', 'b-value'))
-    assert(dbi:put('bar', 'a-value'))
-    assert(dbi:put('bar', 'b-value'))
-    assert(dbi:put('qux', 'a-value'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'a-value'))
+    assert(dbh:put('foo', 'b-value'))
+    assert(dbh:put('bar', 'a-value'))
+    assert(dbh:put('bar', 'b-value'))
+    assert(dbh:put('qux', 'a-value'))
+    local cur = assert(dbh:cursor_open())
 
     -- test that retrieve first key-value pair greater to given key
     local k, v, err = cur:set_upperbound('ether')
@@ -184,13 +190,13 @@ function testcase.set_upperbound()
 end
 
 function testcase.get_both()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('bar', 'bar-value-2'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    assert(dbi:put('qux', 'qux-value-2'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('bar', 'bar-value-2'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    assert(dbh:put('qux', 'qux-value-2'))
+    local cur = assert(dbh:cursor_open())
 
     -- test that retrieve key-value pair equal to given key-value
     local k, v, err = cur:get_both('qux', 'qux-value-2')
@@ -206,14 +212,14 @@ function testcase.get_both()
 end
 
 function testcase.get_both_range()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('bar', 'bar-value-2'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    assert(dbi:put('qux', 'qux-value-3'))
-    assert(dbi:put('qux', 'qux-value-5'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('bar', 'bar-value-2'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    assert(dbh:put('qux', 'qux-value-3'))
+    assert(dbh:put('qux', 'qux-value-5'))
+    local cur = assert(dbh:cursor_open())
 
     -- test that retrieve first key-value pair equal to given key
     local k, v, err = cur:get_both_range('qux')
@@ -241,12 +247,12 @@ function testcase.get_both_range()
 end
 
 function testcase.get_first()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('bar', 'bar-value-2'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('bar', 'bar-value-2'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    local cur = assert(dbh:cursor_open())
 
     -- test that retrieve first key-value pair
     local k, v, err = cur:get_first()
@@ -256,12 +262,12 @@ function testcase.get_first()
 end
 
 function testcase.get_first_dup()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('bar', 'bar-value-2'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('bar', 'bar-value-2'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    local cur = assert(dbh:cursor_open())
 
     local k, v, err = cur:get_first()
     assert.equal(k, 'bar')
@@ -280,12 +286,12 @@ function testcase.get_first_dup()
 end
 
 function testcase.get_last()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    assert(dbi:put('qux', 'qux-value-2'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    assert(dbh:put('qux', 'qux-value-2'))
+    local cur = assert(dbh:cursor_open())
 
     -- test that retrieve last key-value pair
     local k, v, err = cur:get_last()
@@ -295,14 +301,14 @@ function testcase.get_last()
 end
 
 function testcase.get_last_dup()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('bar', 'bar-value-2'))
-    assert(dbi:put('bar', 'bar-value-3'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    assert(dbi:put('qux', 'qux-value-2'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('bar', 'bar-value-2'))
+    assert(dbh:put('bar', 'bar-value-3'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    assert(dbh:put('qux', 'qux-value-2'))
+    local cur = assert(dbh:cursor_open())
     local k, v, err = cur:get_first()
     assert.equal(k, 'bar')
     assert.equal(v, 'bar-value-1')
@@ -316,12 +322,12 @@ function testcase.get_last_dup()
 end
 
 function testcase.get_next()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('bar', 'bar-value-2'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('bar', 'bar-value-2'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    local cur = assert(dbh:cursor_open())
     local k, v, err = cur:get_first()
     assert.equal(k, 'bar')
     assert.equal(v, 'bar-value-1')
@@ -335,12 +341,12 @@ function testcase.get_next()
 end
 
 function testcase.get_next_dup()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('bar', 'bar-value-2'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('bar', 'bar-value-2'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    local cur = assert(dbh:cursor_open())
     local k, v, err = cur:get_first()
     assert.equal(k, 'bar')
     assert.equal(v, 'bar-value-1')
@@ -354,12 +360,12 @@ function testcase.get_next_dup()
 end
 
 function testcase.get_next_nodup()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('bar', 'bar-value-2'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('bar', 'bar-value-2'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    local cur = assert(dbh:cursor_open())
     local k, v, err = cur:get_first()
     assert.equal(k, 'bar')
     assert.equal(v, 'bar-value-1')
@@ -373,12 +379,12 @@ function testcase.get_next_nodup()
 end
 
 function testcase.get_prev()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    assert(dbi:put('qux', 'qux-value-2'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    assert(dbh:put('qux', 'qux-value-2'))
+    local cur = assert(dbh:cursor_open())
     local k, v, err = cur:get_both_range('foo')
     assert.equal(k, 'foo')
     assert.equal(v, 'foo-value-1')
@@ -392,12 +398,12 @@ function testcase.get_prev()
 end
 
 function testcase.get_prev_dup()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    assert(dbi:put('qux', 'qux-value-2'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    assert(dbh:put('qux', 'qux-value-2'))
+    local cur = assert(dbh:cursor_open())
     local k, v, err = cur:get_last()
     assert.equal(k, 'qux')
     assert.equal(v, 'qux-value-2')
@@ -417,12 +423,12 @@ function testcase.get_prev_dup()
 end
 
 function testcase.get_prev_nodup()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    assert(dbi:put('qux', 'qux-value-2'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    assert(dbh:put('qux', 'qux-value-2'))
+    local cur = assert(dbh:cursor_open())
     local k, v, err = cur:get_last()
     assert.equal(k, 'qux')
     assert.equal(v, 'qux-value-2')
@@ -436,13 +442,13 @@ function testcase.get_prev_nodup()
 end
 
 function testcase.get()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('foo', 'foo-value-2'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    assert(dbi:put('qux', 'qux-value-2'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('foo', 'foo-value-2'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    assert(dbh:put('qux', 'qux-value-2'))
+    local cur = assert(dbh:cursor_open())
 
     -- test that retrieve first key-value pairs
     local k, v = assert(cur:get(libmdbx.FIRST))
@@ -511,11 +517,11 @@ function testcase.get()
 end
 
 function testcase.get_batch()
-    local dbi, txn = opendbi()
-    assert(dbi:put('foo', 'foo-value'))
-    assert(dbi:put('bar', 'bar-value'))
-    assert(dbi:put('qux', 'qux-value'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh()
+    assert(dbh:put('foo', 'foo-value'))
+    assert(dbh:put('bar', 'bar-value'))
+    assert(dbh:put('qux', 'qux-value'))
+    local cur = assert(dbh:cursor_open())
 
     -- test that retrieve multiple non-dupsort key/value pairs by cursor
     local res = assert(cur:get_batch())
@@ -527,20 +533,20 @@ function testcase.get_batch()
 end
 
 function testcase.put()
-    local dbi, txn = opendbi()
-    assert(dbi:put('foo', 'foo-value'))
-    assert(dbi:put('bar', 'bar-value'))
-    assert(dbi:put('qux', 'qux-value'))
-    local cur = assert(dbi:cursor_open(txn))
+    local dbh = opendbh()
+    assert(dbh:put('foo', 'foo-value'))
+    assert(dbh:put('bar', 'bar-value'))
+    assert(dbh:put('qux', 'qux-value'))
+    local cur = assert(dbh:cursor_open())
 
     -- test that store by cursor
     assert.is_true(cur:put('foo', 'updated'))
-    assert.equal(dbi:get('foo'), 'updated')
+    assert.equal(dbh:get('foo'), 'updated')
 
     -- test that store current value by cursor
     local k, v = assert(cur:get())
     assert.is_true(cur:put(k, v .. '-updated', libmdbx.CURRENT))
-    assert.equal(dbi:get(k), v .. '-updated')
+    assert.equal(dbh:get(k), v .. '-updated')
 
     -- test that cannot store current value if key does not matched
     k = assert(cur:get())
@@ -550,14 +556,14 @@ function testcase.put()
 end
 
 function testcase.del()
-    local dbi, txn = opendbi(nil, libmdbx.DUPSORT, libmdbx.CREATE)
-    assert(dbi:put('foo', 'foo-value-1'))
-    assert(dbi:put('foo', 'foo-value-2'))
-    assert(dbi:put('bar', 'bar-value-1'))
-    assert(dbi:put('qux', 'qux-value-1'))
-    assert(dbi:put('qux', 'qux-value-2'))
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+    assert(dbh:put('foo', 'foo-value-1'))
+    assert(dbh:put('foo', 'foo-value-2'))
+    assert(dbh:put('bar', 'bar-value-1'))
+    assert(dbh:put('qux', 'qux-value-1'))
+    assert(dbh:put('qux', 'qux-value-2'))
 
-    local cur = assert(dbi:cursor_open(txn))
+    local cur = assert(dbh:cursor_open())
     local is_qux = false
     repeat
         local k = cur:get(libmdbx.NEXT)
@@ -565,32 +571,32 @@ function testcase.del()
         if k == 'foo' then
             -- test that delete all of the data items for the current key
             assert.is_true(cur:del(libmdbx.ALLDUPS))
-            assert.is_nil(dbi:get(k))
+            assert.is_nil(dbh:get(k))
         elseif k == 'bar' then
             -- test that delete current key/data pair
             assert.is_true(cur:del())
-            assert.is_nil(dbi:get(k))
+            assert.is_nil(dbh:get(k))
         elseif k == 'qux' then
             -- test that delete current key/data pair
             assert.is_true(cur:del())
             if not is_qux then
                 is_qux = true
-                assert.equal(dbi:get(k), 'qux-value-2')
+                assert.equal(dbh:get(k), 'qux-value-2')
             else
-                assert.is_nil(dbi:get(k))
+                assert.is_nil(dbh:get(k))
             end
         end
     until k == nil
 end
 
 function testcase.eof()
-    local dbi, txn = opendbi()
-    assert(dbi:put('foo', 'foo-value'))
-    assert(dbi:put('bar', 'bar-value'))
-    assert(dbi:put('qux', 'qux-value'))
+    local dbh = opendbh()
+    assert(dbh:put('foo', 'foo-value'))
+    assert(dbh:put('bar', 'bar-value'))
+    assert(dbh:put('qux', 'qux-value'))
 
     -- test that true if the cursor is points to the end of data
-    local cur = assert(dbi:cursor_open(txn))
+    local cur = assert(dbh:cursor_open())
     assert.is_true(cur:eof())
 
     repeat
@@ -607,13 +613,13 @@ function testcase.eof()
 end
 
 function testcase.on_first()
-    local dbi, txn = opendbi()
-    assert(dbi:put('foo', 'foo-value'))
-    assert(dbi:put('bar', 'bar-value'))
-    assert(dbi:put('qux', 'qux-value'))
+    local dbh = opendbh()
+    assert(dbh:put('foo', 'foo-value'))
+    assert(dbh:put('bar', 'bar-value'))
+    assert(dbh:put('qux', 'qux-value'))
 
     -- test that false if the cursor is not pointed to the first key-value pair
-    local cur = assert(dbi:cursor_open(txn))
+    local cur = assert(dbh:cursor_open())
     assert.is_false(cur:on_first())
 
     -- test that true if the cursor is not pointed to the first key-value pair
@@ -628,14 +634,14 @@ function testcase.on_first()
 end
 
 function testcase.on_last()
-    local dbi, txn = opendbi()
-    assert(dbi:put('foo', 'foo-value'))
-    assert(dbi:put('bar', 'bar-value'))
-    assert(dbi:put('qux', 'qux-value'))
+    local dbh = opendbh()
+    assert(dbh:put('foo', 'foo-value'))
+    assert(dbh:put('bar', 'bar-value'))
+    assert(dbh:put('qux', 'qux-value'))
 
     -- test that false if the cursor is not pointed to the last key-value pair
     local n = 0
-    local cur = assert(dbi:cursor_open(txn))
+    local cur = assert(dbh:cursor_open())
     assert.is_false(cur:on_last())
     repeat
         -- test that false if the cursor is not pointed to the last key-value pair
@@ -650,16 +656,16 @@ function testcase.on_last()
 end
 
 function testcase.estimate_distance()
-    local dbi, txn = opendbi()
-    assert(dbi:put('foo', 'foo-value'))
-    assert(dbi:put('bar', 'bar-value'))
-    assert(dbi:put('qux', 'qux-value'))
-    assert(dbi:put('quux', 'quux-value'))
+    local dbh = opendbh()
+    assert(dbh:put('foo', 'foo-value'))
+    assert(dbh:put('bar', 'bar-value'))
+    assert(dbh:put('qux', 'qux-value'))
+    assert(dbh:put('quux', 'quux-value'))
 
     -- test that estimates the distance between cursors as a number of elements
-    local cur1 = assert(dbi:cursor_open(txn))
+    local cur1 = assert(dbh:cursor_open())
     assert(cur1:get(libmdbx.NEXT))
-    local cur2 = assert(dbi:cursor_open(txn))
+    local cur2 = assert(dbh:cursor_open())
     local prev = 0
     repeat
         local k = cur2:get(libmdbx.NEXT)
@@ -677,14 +683,14 @@ function testcase.estimate_distance()
 end
 
 function testcase.estimate_move()
-    local dbi, txn = opendbi()
-    assert(dbi:put('foo', 'foo-value'))
-    assert(dbi:put('bar', 'bar-value'))
-    assert(dbi:put('qux', 'qux-value'))
-    assert(dbi:put('quux', 'quux-value'))
+    local dbh = opendbh()
+    assert(dbh:put('foo', 'foo-value'))
+    assert(dbh:put('bar', 'bar-value'))
+    assert(dbh:put('qux', 'qux-value'))
+    assert(dbh:put('quux', 'quux-value'))
 
     -- test that estimates the move distance
-    local cur = assert(dbi:cursor_open(txn))
+    local cur = assert(dbh:cursor_open())
     assert(cur:get(libmdbx.NEXT))
     for op, dist in pairs({
         FIRST = 0,
