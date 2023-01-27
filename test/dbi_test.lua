@@ -191,11 +191,11 @@ function testcase.del()
     assert.equal(dbi:get('qux'), 'quux')
 end
 
-function testcase.cursor()
+function testcase.cursor_open()
     local dbi = assert(opendbi())
 
     -- test that create a cursor handle for the specified transaction and DBI handle
-    local cur = assert(dbi:cursor())
+    local cur = assert(dbi:cursor_open())
     assert.match(cur, '^libmdbx.cursor: ', false)
 end
 
