@@ -98,6 +98,11 @@ static inline int exec_txn(lua_State *L, int doas)
         break;
     }
 
+    if (txn->txn && doas != EXEC_AS_BREAK) {
+        txn->env_ref = lauxh_unref(L, txn->env_ref);
+        txn->txn     = NULL;
+    }
+
     if (rc == MDBX_THREAD_MISMATCH) {
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
@@ -106,9 +111,6 @@ static inline int exec_txn(lua_State *L, int doas)
         lua_pushboolean(L, 0);
         lmdbx_pusherror(L, rc);
         return 2;
-    } else if (doas != EXEC_AS_BREAK) {
-        txn->env_ref = lauxh_unref(L, txn->env_ref);
-        txn->txn     = NULL;
     }
 
     if (rc) {
@@ -293,7 +295,7 @@ static int gc_lua(lua_State *L)
         int rc = mdbx_txn_abort(txn->txn);
         lauxh_unref(L, txn->env_ref);
         if (rc) {
-            fprintf(stderr, "failed to mdbx_txn_abort(): %s\n",
+            fprintf(stderr, "failed to mdbx_txn_abort() in gc: %s\n",
                     mdbx_strerror(rc));
         }
     }
