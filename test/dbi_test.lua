@@ -30,6 +30,7 @@ function testcase.dbi()
     local dbi = assert(txn:dbi_open('foo', libmdbx.CREATE))
     local dbi2 = assert(txn:dbi_open('bar', libmdbx.CREATE))
 
+    -- test that return dbi number
     assert.is_int(dbi:dbi())
     assert.not_equal(dbi:dbi(), dbi2:dbi())
 end

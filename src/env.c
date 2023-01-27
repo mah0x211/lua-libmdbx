@@ -565,7 +565,8 @@ static int close_lua(lua_State *L)
             return 2;
         }
 
-        env->env = NULL;
+        env->env      = NULL;
+        env->dbis_ref = lauxh_unref(L, env->dbis_ref);
         if (rc) {
             lua_pushboolean(L, 1);
             lmdbx_pusherror(L, rc);
@@ -639,6 +640,7 @@ static int gc_lua(lua_State *L)
             fprintf(stderr, "failed to mdbx_env_close(): %s\n",
                     mdbx_strerror(rc));
         }
+        env->dbis_ref = lauxh_unref(L, env->dbis_ref);
     }
     return 0;
 }
@@ -662,6 +664,8 @@ int lmdbx_env_create_lua(lua_State *L)
     }
     env->pid = getpid();
     lauxh_setmetatable(L, LMDBX_ENV_MT);
+    lua_newtable(L);
+    env->dbis_ref = lauxh_ref(L);
     return 1;
 }
 
