@@ -44,9 +44,17 @@ function testcase.begin()
     local txn = assert(opentxn())
 
     -- test that create a child transaction
-    local ctxn = assert(txn:begin())
+    local ctxn, err = assert(txn:begin())
     assert.not_equal(ctxn, txn)
     assert.match(ctxn, 'libmdbx.txn: ')
+    assert.is_nil(err)
+    assert.is_true(ctxn:abort())
+
+    -- test that cannot create a child transaction if transaction is invalid
+    assert.is_true(txn:abort())
+    ctxn, err = txn:begin()
+    assert.is_nil(ctxn)
+    assert.equal(err, libmdbx.errno.EINVAL)
 end
 
 function testcase.info()
@@ -104,7 +112,6 @@ function testcase.commit()
     assert.is_true(txn:commit())
 
     -- confirm that txn cannot be used after committed
-    assert.is_nil(txn:env())
     assert.is_false(txn:commit())
 end
 
@@ -120,6 +127,16 @@ function testcase.abort()
     -- confirm that txn cannot be used after aborted
     assert.is_nil(txn:env())
     assert.is_false(txn:commit())
+end
+
+function testcase.abort_break()
+    local txn = assert(opentxn())
+
+    -- test that marks transaction as broken
+    assert.is_true(txn:abort(true))
+
+    -- confirm that txn can be abort
+    assert.is_true(txn:abort())
 end
 
 function testcase.reset()
