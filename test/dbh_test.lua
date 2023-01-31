@@ -153,6 +153,68 @@ function testcase.op_upsert()
     assert.equal(dbh:get('hello'), 'world2')
 end
 
+function testcase.op_upsert_for_dupsort()
+    local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
+
+    -- test that upsert multi-value for key
+    assert(dbh:op_upsert('hello', 'hello-1', true))
+    assert(dbh:op_upsert('hello', 'hello-2', true))
+    assert(dbh:op_upsert('hello', 'hello-3', true))
+    assert(dbh:op_upsert('world', 'world-1', true))
+    -- confirm
+    local tbl = {}
+    local cur = dbh:cursor_open()
+    local k, v = cur:get_first()
+    while k do
+        local list = tbl[k]
+        if not list then
+            list = {}
+            tbl[k] = list
+        end
+        list[#list + 1] = v
+        table.sort(list)
+        k, v = cur:get_next()
+    end
+    cur:close()
+    assert.equal(tbl, {
+        hello = {
+            'hello-1',
+            'hello-2',
+            'hello-3',
+        },
+        world = {
+            'world-1',
+        },
+    })
+
+    -- test that upsert value for key
+    assert(dbh:op_upsert('hello', 'world'))
+    assert.equal(dbh:get('hello'), 'world')
+    -- confirm
+    tbl = {}
+    cur = dbh:cursor_open()
+    k, v = cur:get_first()
+    while k do
+        local list = tbl[k]
+        if not list then
+            list = {}
+            tbl[k] = list
+        end
+        list[#list + 1] = v
+        table.sort(list)
+        k, v = cur:get_next()
+    end
+    cur:close()
+    assert.equal(tbl, {
+        hello = {
+            'world',
+        },
+        world = {
+            'world-1',
+        },
+    })
+end
+
 function testcase.op_update()
     local dbh = opendbh(nil, libmdbx.DUPSORT, libmdbx.CREATE)
     assert(dbh:put('hello', 'world'))

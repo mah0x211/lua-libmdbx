@@ -180,8 +180,7 @@ static int op_update_lua(lua_State *L)
         int rc = 0;
 
         lua_settop(L, 4);
-        lua_pushinteger(L, MDBX_CURRENT);
-        lua_pushinteger(L, MDBX_NOOVERWRITE);
+        lua_pushinteger(L, MDBX_CURRENT | MDBX_NOOVERWRITE);
         rc = replace_lua(L);
         if (rc <= 1) {
             lua_pushboolean(L, rc);
@@ -195,28 +194,41 @@ static int op_update_lua(lua_State *L)
     // txn:op_update(key, val)
     // overwrite by single new value
     lua_settop(L, 3);
-    lua_pushinteger(L, MDBX_CURRENT);
-    lua_pushinteger(L, MDBX_ALLDUPS);
+    lua_pushinteger(L, MDBX_CURRENT | MDBX_ALLDUPS);
     return put_lua(L);
 }
 
 static int op_upsert_lua(lua_State *L)
 {
-    int multi = lauxh_optboolean(L, 4, 0);
+    lmdbx_dbh_t *dbh = lauxh_checkudata(L, 1, LMDBX_DBH_MT);
+    size_t klen      = 0;
+    const char *key  = lauxh_checklstring(L, 2, &klen);
+    size_t vlen      = 0;
+    const char *val  = lauxh_checklstring(L, 3, &vlen);
+    int multi        = lauxh_optboolean(L, 4, 0);
+    MDBX_val k       = {.iov_base = (void *)key, .iov_len = klen};
+    MDBX_val v       = {.iov_base = (void *)val, .iov_len = vlen};
+    MDBX_val nouse   = {.iov_base = (void *)NULL, .iov_len = 0};
+    int rc           = 0;
 
     // txn:op_upsert(key, val [, multi])
-    lua_settop(L, 3);
-    lua_pushinteger(L, MDBX_UPSERT);
     if (multi) {
-        // Has effect only for MDBX_DUPSORT databases. For upsertion:
-        // don't write if the key-value pair already exist.
-        lua_pushinteger(L, MDBX_NODUPDATA);
+        rc = mdbx_put(GET_TXN(dbh), GET_DBI(dbh), &k, &v, MDBX_UPSERT);
+    } else if (mdbx_get(GET_TXN(dbh), GET_DBI(dbh), &k, &nouse) == 0) {
+        // replace current value
+        rc = mdbx_put(GET_TXN(dbh), GET_DBI(dbh), &k, &v,
+                      MDBX_UPSERT | MDBX_CURRENT | MDBX_ALLDUPS);
     } else {
-        // overwrite by single new value
-        lua_pushinteger(L, MDBX_ALLDUPS);
+        rc = mdbx_put(GET_TXN(dbh), GET_DBI(dbh), &k, &v, MDBX_UPSERT);
     }
 
-    return put_lua(L);
+    if (rc) {
+        lua_pushboolean(L, 0);
+        lmdbx_pusherror(L, rc);
+        return 2;
+    }
+    lua_pushboolean(L, 1);
+    return 1;
 }
 
 static int op_insert_lua(lua_State *L)
